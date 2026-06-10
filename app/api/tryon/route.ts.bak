@@ -1,0 +1,54 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+export async function POST(req: NextRequest) {
+  const { modelImage, garmentImage, category } = await req.json()
+  if (!modelImage || !garmentImage) {
+    return NextResponse.json({ error: 'modelImage ve garmentImage zorunlu' }, { status: 400 })
+  }
+  const apiKey = process.env.FASHN_API_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!apiKey) return NextResponse.json({ error: 'FASHN_API_KEY bulunamadı' }, { status: 500 })
+  if (!supabaseUrl || !supabaseKey) return NextResponse.json({ error: 'Supabase config eksik' }, { status: 500 })
+  const supabase = createClient(supabaseUrl, supabaseKey)
+  async function uploadBase64(base64: string, filename: string): Promise<string> {
+    const base64Data = base64.split(',')[1]
+    const buffer = Buffer.from(base64Data, 'base64')
+    const { error } = await supabase.storage.from('tryon-images').upload(filename, buffer, { contentType: 'image/jpeg', upsert: true })
+    if (error) throw new Error('Upload hatası: ' + error.message)
+    const { data } = supabase.storage.from('tryon-images').getPublicUrl(filename)
+    return data.publicUrl
+  }
+  const categoryMap: Record<string, string> = { 'Üst': 'tops', 'Alt': 'bottoms', 'Elbise': 'one-pieces', 'Ceket': 'tops', 'Dış Giyim': 'tops' }
+  const fashnCategory = categoryMap[category] ?? 'tops'
+  try {
+    const timestamp = Date.now()
+    const [modelUrl, garmentUrl] = await Promise.all([
+      uploadBase64(modelImage, `model-${timestamp}.jpg`),
+      uploadBase64(garmentImage, `garment-${timestamp}.jpg`),
+    ])
+    console.log('modelUrl:', modelUrl)
+    console.log('garmentUrl:', garmentUrl)
+    const runRes = await fetch('https://api.fashn.ai/v1/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({ model_name: 'tryon-v1.6', inputs: { model_image: modelUrl, garment_image: garmentUrl, category: fashnCategory } }),
+    })
+    const runData = await runRes.json()
+    console.log('runData:', JSON.stringify(runData))
+    if (!runRes.ok) return NextResponse.json({ error: 'FASHN run hatası', detail: runData }, { status: runRes.status })
+    const predictionId = runData.id
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 2000))
+      const statusRes = await fetch(`https://api.fashn.ai/v1/status/${predictionId}`, { headers: { 'Authorization': `Bearer ${apiKey}` } })
+      const statusData = await statusRes.json()
+      console.log('status:', statusData.status)
+      if (statusData.status === 'completed') return NextResponse.json({ output: statusData.output[0] })
+      if (statusData.status === 'failed') return NextResponse.json({ error: 'FASHN başarısız', detail: statusData.error }, { status: 500 })
+    }
+    return NextResponse.json({ error: 'Zaman aşımı' }, { status: 504 })
+  } catch (err) {
+    return NextResponse.json({ error: 'Sunucu hatası', detail: String(err) }, { status: 500 })
+  }
+}
