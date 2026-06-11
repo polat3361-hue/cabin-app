@@ -22,6 +22,11 @@ export async function GET(request: NextRequest) {
                     html.match(/data-src="(https:\/\/images\.hepsiburada[^"]+)"/i)?.[1] ||
                     html.match(/src="(https:\/\/images\.hepsiburada[^"]+)"/i)?.[1] || null;
 
+    // N11 özel
+    const n11Image = html.match(/n11scnd\.com[^"'\s]+\.jpg[^"'\s]*/i)?.[0] ||
+                     html.match(/"image"\s*:\s*\["([^"]+)"/i)?.[1] ||
+                     html.match(/property="og:image:secure_url"[^>]*content="([^"]+)"/i)?.[1] || null;
+
     const ogImage = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i)?.[1] ||
                     html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:image"/i)?.[1] || null;
 
@@ -30,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     const twitterImage = html.match(/<meta[^>]*name="twitter:image"[^>]*content="([^"]+)"/i)?.[1] || null;
 
-    const image = ogImage || twitterImage || hbImage;
+    const image = ogImage || twitterImage || hbImage || n11Image;
     const name = ogTitle ? ogTitle.substring(0, 60) : 'Kıyafet';
     const brand = new URL(url).hostname.replace('www.', '').split('.')[0].toUpperCase();
 
