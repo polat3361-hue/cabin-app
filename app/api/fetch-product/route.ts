@@ -34,9 +34,20 @@ export async function GET(request: NextRequest) {
     const name = ogTitle ? ogTitle.substring(0, 60) : 'Kıyafet';
     const brand = new URL(url).hostname.replace('www.', '').split('.')[0].toUpperCase();
 
-    const priceMatch = html.match(/class="[^"]*price[^"]*"[^>]*>([^<]+)/i) ||
-                       html.match(/class="[^"]*prc[^"]*"[^>]*>([^<]+)/i);
-    const price = priceMatch ? priceMatch[1].trim() : null;
+    // Fiyat çek
+    const pricePatterns = [
+      /product:price:amount[^>]*content="([^"]+)"/i,
+      /"price"\s*:\s*"?(\d+[\.,]\d+)"?/i,
+      /"offers"\s*:\s*\{[^}]*"price"\s*:\s*"?(\d+[\.,]\d+)"?/i,
+      /itemprop="price"[^>]*content="([^"]+)"/i,
+      /class="[^"]*price[^"]*"[^>]*>\s*[\$₺€]?\s*([\d.,]+)/i,
+    ];
+
+    let price = null;
+    for (const pattern of pricePatterns) {
+      const match = html.match(pattern);
+      if (match) { price = match[1].trim(); break; }
+    }
 
     const colorMatches = html.match(/"variants"\s*:\s*(\[[\s\S]*?\])/);
     let colors: { name: string; url: string; image: string }[] = [];
