@@ -5,44 +5,31 @@ export async function GET(request: NextRequest) {
   if (!url) return NextResponse.json({ error: 'URL gerekli' }, { status: 400 });
 
   try {
-    const apiKey = process.env.SCRAPINGBEE_API_KEY;
-    const scrapeUrl = `https://app.scrapingbee.com/api/v1/?api_key=${apiKey}&url=${encodeURIComponent(url)}&render_js=false`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+      },
+    });
 
-    const res = await fetch(scrapeUrl);
-    const html = await res.text();
+    const html = await response.text();
 
-    const ldBlocks = [...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)];
-    let ldImage: string | null = null;
-    let ldName: string | null = null;
-    let ldPrice: string | null = null;
+    const ogImage = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i)?.[1] ||
+                    html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:image"/i)?.[1] || null;
 
-    // Trendyol CDN resim çek
-    const cdnMatch = html.match(/https:\/\/cdn\.dsmcdn\.com[^"'\s]+\.jpg/i) ||
-                     html.match(/https:\/\/img-trendyol[^"'\s]+\.jpg/i);
-    if (cdnMatch && !ldImage) ldImage = cdnMatch[0];
+    const ogTitle = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i)?.[1] ||
+                    html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:title"/i)?.[1] || null;
 
-    for (const b of ldBlocks) {
-      try {
-        const j = JSON.parse(b[1]);
-        if (j.image) {
-          if (typeof j.image === 'string') ldImage = j.image;
-          else if (Array.isArray(j.image)) ldImage = j.image[0];
-          else if (j.image.contentUrl) ldImage = Array.isArray(j.image.contentUrl) ? j.image.contentUrl[0] : j.image.contentUrl;
-        }
-        if (j.name) ldName = j.name;
-        if (j.offers?.price) ldPrice = j.offers.price;
-        if (j.offers?.lowPrice) ldPrice = j.offers.lowPrice;
-      } catch {}
-    }
+    const twitterImage = html.match(/<meta[^>]*name="twitter:image"[^>]*content="([^"]+)"/i)?.[1] || null;
 
-    const imgMatch = html.match(/meta[^>]*og:image[^>]*content="([^"]+)"/i) || html.match(/content="([^"]+)"[^>]*og:image/i);
-    const titleMatch = html.match(/meta[^>]*og:title[^>]*content="([^"]+)"/i) || html.match(/content="([^"]+)"[^>]*og:title/i);
-    const priceMatch = html.match(/product:price:amount[^>]*content="([^"]+)"/i);
-
-    const image = ldImage || (imgMatch ? imgMatch[1] : null);
-    const name = ldName || (titleMatch ? titleMatch[1].substring(0, 50) : 'Kıyafet');
-    const price = ldPrice || (priceMatch ? priceMatch[1] : null);
+    const image = ogImage || twitterImage;
+    const name = ogTitle ? ogTitle.substring(0, 60) : 'Kıyafet';
     const brand = new URL(url).hostname.replace('www.', '').split('.')[0].toUpperCase();
+
+    const priceMatch = html.match(/class="[^"]*price[^"]*"[^>]*>([^<]+)/i) ||
+                       html.match(/class="[^"]*prc[^"]*"[^>]*>([^<]+)/i);
+    const price = priceMatch ? priceMatch[1].trim() : null;
 
     const colorMatches = html.match(/"variants"\s*:\s*(\[[\s\S]*?\])/);
     let colors: { name: string; url: string; image: string }[] = [];
@@ -61,7 +48,7 @@ export async function GET(request: NextRequest) {
       image,
       name,
       brand,
-      price: price ? `₺${parseFloat(String(price)).toFixed(2)}` : '—',
+      price: price || '—',
       colors,
       success: !!image,
     });
