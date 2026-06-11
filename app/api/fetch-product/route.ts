@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const apiKey = process.env.SCRAPINGBEE_API_KEY;
-    const scrapeUrl = `https://app.scrapingbee.com/api/v1/?api_key=${apiKey}&url=${encodeURIComponent(url)}&render_js=false`;
+    const scrapeUrl = `https://app.scrapingbee.com/api/v1/?api_key=${apiKey}&url=${encodeURIComponent(url)}&render_js=true`;
 
     const res = await fetch(scrapeUrl);
     const html = await res.text();
