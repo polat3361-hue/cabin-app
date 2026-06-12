@@ -62,6 +62,9 @@ export default function DashboardPage() {
   const [selectedHistory, setSelectedHistory] = useState<{id: number, date: string, photo: string, outfit: string, result: string, outfitName: string} | null>(null);
   const [isKombin, setIsKombin] = useState(false);
   const [kombinItems, setKombinItems] = useState<{outfitId: number, category: string}[]>([]);
+  const [hoveredPhotoId, setHoveredPhotoId] = useState<number | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [likeToast, setLikeToast] = useState(false);
   const [uyumScore, setUyumScore] = useState(0);
   const [colorSuggestion, setColorSuggestion] = useState('');
   const [styleTip, setStyleTip] = useState('');
@@ -137,6 +140,21 @@ export default function DashboardPage() {
     const limited = w.slice(0, 50);
     setWardrobe(limited);
     safeSet('cabin_wardrobe', limited, 50);
+  }
+
+  async function deletePhoto(photo: Photo) {
+    const marker = '/user-photos/';
+    const filename = photo.url.includes(marker) ? photo.url.split(marker)[1] : null;
+    if (filename) {
+      await supabase.storage.from('user-photos').remove([decodeURIComponent(filename)]);
+    }
+    const updated = photos.filter(p => p.id !== photo.id);
+    savePhotos(updated);
+    if (selectedPhoto?.id === photo.id) {
+      setSelectedPhoto(updated.length > 0 ? updated[0] : null);
+    }
+    setDeleteConfirmId(null);
+    setHoveredPhotoId(null);
   }
 
   function addPhoto(url: string, name: string) {
@@ -288,11 +306,14 @@ export default function DashboardPage() {
         .tab-btn:hover { background: #f5f3ff !important; color: #7c3aed !important; }
         .size-btn:hover { border-color: #7c3aed !important; color: #7c3aed !important; }
         .upload-zone:hover { border-color: #7c3aed !important; background: #f5f3ff !important; }
+        .link-input-wrapper { border: 2px solid #c4b5fd !important; transition: border-color .15s, box-shadow .15s; }
+        .link-input-wrapper:focus-within { border-color: #7c3aed !important; box-shadow: 0 0 0 3px rgba(124,58,237,0.15) !important; }
+        .gift-card:hover { transform: scale(1.02); }
       `}</style>
 
       {/* ── HEADER ── */}
       <div style={{ height: 60, background: '#fff', borderBottom: '1px solid #ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', flexShrink: 0, zIndex: 10, boxShadow: '0 1px 4px rgba(0,0,0,.06)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div onClick={() => setActiveMenu('CaBin')} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
           <div style={{ fontFamily: 'Georgia, serif', fontSize: 24, fontWeight: 800, background: 'linear-gradient(135deg,#7c3aed,#ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>CaBin</div>
           <div style={{ fontSize: 11, color: '#a78bfa', fontWeight: 500 }}>See it. Try it. Love it.</div>
         </div>
@@ -377,8 +398,30 @@ export default function DashboardPage() {
                   {photos.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {photos.slice(0, 6).map(p => (
-                        <div key={p.id} onClick={() => setSelectedPhoto(p)} style={{ width: 46, height: 46, borderRadius: 8, overflow: 'hidden', border: `2px solid ${selectedPhoto?.id === p.id ? '#3b82f6' : '#e5e7eb'}`, cursor: 'pointer', transition: 'border-color .15s' }}>
-                          <img src={p.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <div key={p.id} style={{ position: 'relative', width: 46, height: 46, flexShrink: 0 }}
+                          onMouseEnter={() => setHoveredPhotoId(p.id)}
+                          onMouseLeave={() => { setHoveredPhotoId(null); }}
+                        >
+                          <div onClick={() => setSelectedPhoto(p)} style={{ width: 46, height: 46, borderRadius: 8, overflow: 'hidden', border: `2px solid ${selectedPhoto?.id === p.id ? '#3b82f6' : '#e5e7eb'}`, cursor: 'pointer', transition: 'border-color .15s' }}>
+                            <img src={p.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                          {/* Sil butonu — hover'da veya mobilden hep görünür */}
+                          {hoveredPhotoId === p.id && deleteConfirmId !== p.id && (
+                            <button
+                              onClick={e => { e.stopPropagation(); setDeleteConfirmId(p.id); }}
+                              style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, borderRadius: '50%', background: '#ef4444', color: '#fff', border: '2px solid #fff', fontSize: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, padding: 0, lineHeight: 1, fontWeight: 700 }}
+                            >✕</button>
+                          )}
+                          {/* Onay overlay */}
+                          {deleteConfirmId === p.id && (
+                            <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, zIndex: 11 }}>
+                              <div style={{ fontSize: 8, color: '#fff', fontWeight: 600, textAlign: 'center', lineHeight: 1.3 }}>Sil?</div>
+                              <div style={{ display: 'flex', gap: 3 }}>
+                                <button onClick={() => deletePhoto(p)} style={{ fontSize: 9, padding: '2px 5px', borderRadius: 4, border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>Evet</button>
+                                <button onClick={() => setDeleteConfirmId(null)} style={{ fontSize: 9, padding: '2px 5px', borderRadius: 4, border: 'none', background: '#e5e7eb', color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>Hayır</button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -394,7 +437,7 @@ export default function DashboardPage() {
                     <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>Ürünü Seç</span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: '#fff', marginBottom: 8 }}>
+                  <div className="link-input-wrapper" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10, background: '#fff', marginBottom: 8 }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                     <input value={link} onChange={e => setLink(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchLink()} placeholder="Trendyol, Hepsiburada linki..." style={{ flex: 1, border: 'none', outline: 'none', fontSize: 12, color: '#374151', background: 'transparent', fontFamily: 'inherit' }} />
                     {link && <button onClick={fetchLink} style={{ padding: '4px 10px', borderRadius: 8, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Getir</button>}
@@ -472,13 +515,13 @@ export default function DashboardPage() {
 
                 <div style={{ height: 1, background: '#f3f4f6', marginBottom: 20 }} />
 
-                {/* STEP 3 */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#7c3aed', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>3</div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>Üstünde Gör</span>
+                {/* Gift Card */}
+                <div onClick={() => setActiveMenu('Davet Et')} className="gift-card" style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', transition: 'transform .15s', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 24, flexShrink: 0 }}>🎁</span>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>30 krediye kadar hediye!</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Görevleri tamamla, kredini kap</div>
                   </div>
-
                 </div>
               </div>
             </div>
@@ -487,7 +530,7 @@ export default function DashboardPage() {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f5f3ff', overflow: 'hidden', padding: 16, gap: 12 }}>
 
               {/* Sonuç alanı */}
-              <div style={{ flex: 1, borderRadius: 16, border: '2px solid #fb923c', overflow: 'hidden', position: 'relative', background: '#fafafa', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1, borderRadius: 16, border: '2px solid #ddd6fe', overflow: 'hidden', position: 'relative', background: '#fafafa', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
 
                 {/* Kategori barı */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 12px', borderBottom: '1px solid #f0eef8', flexShrink: 0, background: '#fff' }}>
@@ -568,8 +611,8 @@ export default function DashboardPage() {
                       </>
                     ) : (
                       <div style={{ position: 'relative', width: 120, height: 140 }}>
-                        {outfits.slice(0, 4).map((o, i) => (
-                          <div key={o.id} onClick={() => setSelectedOutfit(o)} style={{ position: 'absolute', width: 80, height: 100, borderRadius: 10, overflow: 'hidden', border: `2px solid ${selectedOutfit?.id === o.id ? '#7c3aed' : '#e5e7eb'}`, cursor: 'pointer', transform: `rotate(${(i - 1.5) * 8}deg) translateY(${i * 2}px)`, left: i * 8, top: i * 4, boxShadow: '0 2px 8px rgba(0,0,0,.1)', background: '#fff', zIndex: i }}>
+                        {outfits.slice(0, 4).map((o: Outfit, i: number) => (
+                          <div key={o.id} onClick={() => setSelectedOutfit(o)} style={{ position: 'absolute', width: 80, height: 100, borderRadius: 10, overflow: 'hidden', border: '2px solid #e5e7eb', cursor: 'pointer', transform: `rotate(${(i - 1.5) * 8}deg) translateY(${i * 2}px)`, left: i * 8, top: i * 4, boxShadow: '0 2px 8px rgba(0,0,0,.1)', background: '#fff', zIndex: i }}>
                             <img src={o.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
                         ))}
@@ -591,7 +634,21 @@ export default function DashboardPage() {
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
                       Sepete Ekle
                     </button>
-                    <button onClick={() => { setLiked(!liked); if (result && selectedOutfit) { const fav = { ...selectedOutfit, resultImg: result }; const updated = [fav, ...favorites.filter((f: any) => f.id !== selectedOutfit.id)]; setFavorites(updated); safeSet('cabin_favorites', updated, 30); }}} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: '1px solid #e5e7eb', background: liked ? '#fdf2f8' : '#fff', color: liked ? '#ec4899' : '#374151', fontSize: 10, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <button onClick={() => {
+                      const newLiked = !liked;
+                      setLiked(newLiked);
+                      if (result && selectedOutfit) {
+                        const fav = { ...selectedOutfit, resultImg: result };
+                        const updatedFavs = [fav, ...favorites.filter((f: any) => f.id !== selectedOutfit.id)];
+                        setFavorites(updatedFavs);
+                        safeSet('cabin_favorites', updatedFavs, 30);
+                        if (newLiked && !wardrobe.find(w => w.id === selectedOutfit.id)) {
+                          saveWardrobe([selectedOutfit, ...wardrobe]);
+                          setLikeToast(true);
+                          setTimeout(() => setLikeToast(false), 2500);
+                        }
+                      }
+                    }} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: '1px solid #e5e7eb', background: liked ? '#fdf2f8' : '#fff', color: liked ? '#ec4899' : '#374151', fontSize: 10, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill={liked ? '#ec4899' : 'none'} stroke={liked ? '#ec4899' : 'currentColor'} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                       Beğen
                     </button>
@@ -975,6 +1032,14 @@ export default function DashboardPage() {
             <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 12 }}>{selectedHistory.date}</div>
             <button onClick={async () => { const res = await fetch(selectedHistory.result); const blob = await res.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'cabin-sonuc.jpg'; a.click(); }} style={{ width: '100%', padding: 12, borderRadius: 10, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>⬇ İndir</button>
           </div>
+        </div>
+      )}
+
+      {/* ── LIKE TOAST ── */}
+      {likeToast && (
+        <div style={{ position: 'fixed', bottom: 72, left: '50%', transform: 'translateX(-50%)', background: '#1a1a2e', color: '#fff', padding: '10px 20px', borderRadius: 24, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, zIndex: 300, boxShadow: '0 4px 20px rgba(0,0,0,.25)', whiteSpace: 'nowrap', animation: 'slideIn .2s ease' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#ec4899" stroke="#ec4899" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Gardırobuna eklendi!
         </div>
       )}
 

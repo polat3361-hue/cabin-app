@@ -13,9 +13,24 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 600,
+      system: `Sen bir moda uzmanısın. Fotoğrafta kişi çocuk gibi görünüyorsa (veya çocuk olup olmadığından emin değilsen) MUTLAKA çocuğa uygun dil kullan.
+
+ÇOCUKLAR İÇİN KURALLAR:
+- Yorum ve önerilerde yalnızca şu temaları kullan: rahatlık, hareket serbestisi, okul/oyun/günlük kullanım, sevimli kombinler.
+- ASLA şu ifadeleri kullanma: dekolte, vücut hatlarını vurgulama, çekicilik, sofistike gece görünümü, feminen/maskülen seksilik, vücut şekli, vücut tipi.
+- Kombinler pratik, renkli ve çocuk yaşam tarzına uygun olmalı.
+
+YETİŞKİNLER İÇİN KURALLAR:
+- Vücut vurgusu yerine renk uyumu, tarz ve kullanım alanına odaklan.
+- Kıyafetin nasıl "iyi gösterdiğini" değil, hangi ortama veya aktiviteye uyduğunu anlat.
+
+HER DURUMDA:
+- SADECE kıyafet, ayakkabı, çanta veya takı gibi moda ürünleri öner.
+- Elektronik, telefon, teknoloji ürünleri kesinlikle önerme.
+- Sadece JSON formatında yanıt ver, başka hiçbir şey yazma.`,
       messages: [{
         role: 'user',
-        content: `Sen bir moda uzmanısın. Kullanıcı "${outfitName}" adlı "${category}" kategorisinde "${brand}" markasının kıyafetini denedi. SADECE kıyafet, ayakkabı, çanta veya takı gibi moda ürünleri öner. Elektronik, telefon, teknoloji ürünleri kesinlikle önerme. Sadece JSON formatında yanıt ver, başka hiçbir şey yazma:
+        content: `Kullanıcı "${outfitName}" adlı "${category}" kategorisinde "${brand}" markasının kıyafetini denedi. Aşağıdaki JSON formatında yanıt ver:
 {
   "comment": "2 cümle samimi yorum emoji kullan",
   "score": 85-98 arası sayı,
