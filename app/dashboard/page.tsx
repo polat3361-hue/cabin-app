@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Zap, Clock, Heart, ShoppingBag, Store, CreditCard, User, Settings, Gift, Bell, Shirt, Scissors, Sparkles, Wind, Footprints, Glasses, HardHat, Gem, Images, RotateCw, Tag, Trash2 } from 'lucide-react';
+import { Zap, Clock, Heart, ShoppingBag, Store, CreditCard, User, Settings, Gift, Bell, Shirt, Scissors, Sparkles, Wind, Footprints, Glasses, HardHat, Gem, Images, RotateCw, Tag, Trash2, Download } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface Outfit {
@@ -197,6 +197,19 @@ export default function DashboardPage() {
     saveTryons(tryons.filter(t => !selectedTryonIds.has(t.id)));
     setSelectedTryonIds(new Set());
     setTryonSelectMode(false);
+  }
+
+  async function downloadImage(url: string, filename: string) {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    } catch { window.open(url, '_blank'); }
   }
 
   function deletePhoto(photo: Photo) {
@@ -770,8 +783,8 @@ export default function DashboardPage() {
                       <svg width="13" height="13" viewBox="0 0 24 24" fill={liked ? '#ec4899' : 'none'} stroke={liked ? '#ec4899' : 'currentColor'} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                       Beğen
                     </button>
-                    <button className="action-btn" onClick={async () => { if (!result) return; try { const res = await fetch(result); const blob = await res.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'cabin-sonuc.jpg'; a.click(); } catch { window.open(result, '_blank'); }}} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: '1.5px solid #ddd6fe', background: '#f5f3ff', color: '#6d28d9', fontSize: 10, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <button className="action-btn" onClick={() => { const url = (currentTryonId != null ? tryons.find(t => t.id === currentTryonId)?.resultImg : null) ?? result; if (url) downloadImage(url, 'cabin-deneme.jpg'); }} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: '1.5px solid #ddd6fe', background: '#f5f3ff', color: '#6d28d9', fontSize: 10, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      <Download size={13} />
                       İndir
                     </button>
                     <button onClick={() => { setResult(null); setSelectedOutfit(null); setAiComment(''); setColorSuggestion(''); setStyleTip(''); setCombinations([]); setLiked(false); setCurrentTryonId(null); }} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#8b5cf6,#f472b6)', color: '#fff', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
@@ -1117,8 +1130,15 @@ export default function DashboardPage() {
                                 </div>
                               )}
                               <div style={{ fontSize: 9, color: '#d1d5db', marginBottom: 6 }}>{t.date}</div>
-                              {!tryonSelectMode && t.link && (
-                                <a href={t.link} target="_blank" rel="noopener noreferrer" style={{ display: 'block', padding: '5px', borderRadius: 7, background: 'linear-gradient(135deg,#fb923c,#f97316)', color: '#fff', fontSize: 10, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>Satın Al</a>
+                              {!tryonSelectMode && (
+                                <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
+                                  {t.link && (
+                                    <a href={t.link} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: 'block', padding: '5px', borderRadius: 7, background: 'linear-gradient(135deg,#fb923c,#f97316)', color: '#fff', fontSize: 10, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>Satın Al</a>
+                                  )}
+                                  <button onClick={e => { e.stopPropagation(); downloadImage(t.resultImg, `cabin-${t.outfitName.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '_')}.jpg`); }} style={{ padding: '5px 7px', borderRadius: 7, border: '1px solid #ede9fe', background: '#f5f3ff', color: '#7c3aed', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                    <Download size={11} />İndir
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>
