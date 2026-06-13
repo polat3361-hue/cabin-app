@@ -344,13 +344,22 @@ export default function DashboardPage() {
 
   async function doTry() {
     const doSequential = isKombin && kombinItems.length > 0;
-    if (!selectedPhoto || credits <= 0) return;
+    if (!selectedPhoto) return;
     if (!doSequential && !selectedOutfit) return;
 
+    // Kredi yoksa yönlendir
+    if (credits <= 0) {
+      setStatus('❌ Krediniz bitti! Kredi yükleyin.');
+      setTimeout(() => { setStatus(''); setActiveMenu('Krediler'); }, 2000);
+      return;
+    }
+
+    // Auth token — sunucuda JWT doğrulaması için gerekli
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { window.location.href = '/login'; return; }
+    const authHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` };
+
     const accessoryCatNorm = ['Ayakkabi','Canta','Gozluk','Aksesuar','Taki','Sapka'];
-    const capturedCost = doSequential
-      ? kombinItems.reduce((sum, ki) => sum + kombinPartCost(ki.category), 0)
-      : 1;
 
     setLoading(true);
     setResult(null);
@@ -363,7 +372,6 @@ export default function DashboardPage() {
 
     try {
       let finalOutput: string | null = null;
-      let earnedCost = 0;
 
       if (doSequential) {
         // Clothes first, accessories last — so accessories layer on top
@@ -379,26 +387,35 @@ export default function DashboardPage() {
           setKombinProgress(`(${i + 1}/${sorted.length} parça)`);
           const res = await fetch('/api/tryon', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders,
             body: JSON.stringify({ modelImage: currentModelImg, garmentImage: outfit.img, category: ki.category }),
           });
+          if (res.status === 402) {
+            setStatus('❌ Yetersiz kredi! Kredi yükleyin.');
+            setTimeout(() => { setStatus(''); setActiveMenu('Krediler'); }, 2500);
+            break;
+          }
           const data = await res.json();
           if (data.output) {
             currentModelImg = data.output;
             finalOutput = data.output;
-            earnedCost += kombinPartCost(ki.category);
           }
         }
       } else {
         const res = await fetch('/api/tryon', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify({ modelImage: selectedPhoto.url, garmentImage: selectedOutfit!.img, category }),
         });
+        if (res.status === 402) {
+          setStatus('❌ Yetersiz kredi! Kredi yükleyin.');
+          setTimeout(() => { setStatus(''); setActiveMenu('Krediler'); }, 2500);
+          setLoading(false);
+          return;
+        }
         const data = await res.json();
         if (data.output) {
           finalOutput = data.output;
-          earnedCost = capturedCost;
         } else {
           setStatus('❌ ' + (data.error || 'Hata oluştu'));
           setTimeout(() => setStatus(''), 5000);
@@ -453,7 +470,9 @@ export default function DashboardPage() {
         const updatedHistory = [historyItem, ...history].slice(0, 50);
         setHistory(updatedHistory);
         safeSet('cabin_history', updatedHistory, 30);
-        setCredits(c => c - earnedCost);
+        // Kredileri sunucudan taze oku (sunucu zaten düşürdü)
+        supabase.from('profiles').select('credits').eq('id', session.user.id).single()
+          .then(({ data: p }) => { if (p?.credits != null) setCredits(p.credits); });
         setStatus('✅ Tamamlandı!');
         setTimeout(() => setStatus(''), 3000);
         // Upload result image to Supabase for permanent storage (FASHN URLs expire in 72h)
@@ -781,7 +800,7 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Ortada Dene butonu */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 8px', flexShrink: 0, gap: 4 }}>
                     <button onClick={doTry} disabled={loading || !selectedPhoto || (isKombin ? kombinItems.length === 0 : !selectedOutfit)} className="try-btn" style={{ width: 48, height: 48, border: 'none', background: 'none', cursor: (loading || !selectedPhoto || !selectedOutfit) ? 'not-allowed' : 'pointer', flexShrink: 0, padding: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
                       <RotateCw size={68} strokeWidth={1.5} className="rotate-icon" style={{ color: (loading || !selectedPhoto || !selectedOutfit) ? '#d1d5db' : '#fb923c' }} />
                       <div style={{ width: 40, height: 40, borderRadius: '50%', background: (loading || !selectedPhoto || !selectedOutfit) ? '#e5e7eb' : 'linear-gradient(135deg,#8b5cf6,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1, boxShadow: (loading || !selectedPhoto || !selectedOutfit) ? 'none' : '0 4px 14px rgba(124,58,237,.4)', flexShrink: 0 }}>
@@ -791,6 +810,12 @@ export default function DashboardPage() {
                         }
                       </div>
                     </button>
+                    {/* Maliyet etiketi */}
+                    <span style={{ fontSize: 10, fontWeight: 700, color: credits > 0 ? '#7c3aed' : '#ef4444', whiteSpace: 'nowrap' }}>
+                      {loading ? '...' : credits <= 0 ? '0 kr' : isKombin
+                        ? `${kombinItems.reduce((s, ki) => s + kombinPartCost(ki.category), 0)} kr`
+                        : `${kombinPartCost(category)} kr`}
+                    </span>
                   </div>
 
                   {/* SONRA - Sonuç */}
