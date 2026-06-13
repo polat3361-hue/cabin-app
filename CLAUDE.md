@@ -2,25 +2,25 @@
 
 ## Görev/Davet Sistemi Kuralları
 
-### GÖREV ÖDÜLLERİ (toplam 30 kredi)
-- WhatsApp davet → 5 kişi kayıt olup ürün alırsa: +15 kredi
-- Facebook'ta paylaş: +2 (tek sefer, gerçek paylaş ekranı açılmalı)
-- Instagram'da paylaş: +2 (aynı kural)
-- TikTok'ta paylaş: +2 (aynı kural)
-- X'te paylaş: +2 (aynı kural)
-- Tüm görevler tamamlanınca bonus: +7
+TOPLAM ÖDÜL HAVUZU: 40 kredi (davet 30 + sosyal 10)
 
-### GÖREVLERİN AÇILMA / YENİLENME MANTIĞI
+### DAVET ÖDÜLLERİ (kademeli, birikerek)
+- 1 davet ettiği arkadaş satın alırsa: +5 kredi
+- 3 arkadaş satın alırsa: +10 kredi (birikmiş toplam 15)
+- 5 arkadaş satın alırsa: +15 kredi (birikmiş toplam 30)
+- Davet ödülü DOĞRULANABİLİR: arkadaşın davet linkinden kayıt + satın alması sistemde görünür. Güvenli.
 
-**İlk açılma:** Kullanıcı en az 1 paket satın alınca görevler açılır.
-(Hiç ödeme yapmayan görev ödülü alamaz — bedavacı engeli.)
+### SOSYAL PAYLAŞIM ÖDÜLLERİ (kademeli, birikerek)
+- En az 2 sosyal medyada paylaş (Facebook/Instagram/TikTok/X): +5 kredi
+- 4 sosyal medyanın hepsinde paylaş: +5 kredi daha (birikmiş toplam 10)
+- Paylaşım DOĞRULANAMAZ (platformlar bildirmez). Suistimal riski var.
 
-**Tamamlanınca:** Görevler kilitlenir (soluk/pasif hale gelir).
+### SUİSTİMAL KORUMALARI
+1. ÖN ŞART: Görev ödülü almak için kullanıcı önce EN AZ BİR PAKET satın almış (para ödemiş) olmalı. Hiç ödeme yapmayan ödül alamaz.
+2. Görevler tamamlanınca KİLİTLENİR (6 ay donar).
+3. TEKRAR AÇILMA — şu ikisinden biri (hangisi önce olursa):
+   - Son açılıştan 6 ay geçti VE bu sürede en az 5 paket alındı, VEYA
+   - Toplam 10 paket alındı (süreden bağımsız hızlandırma).
+4. Sosyal paylaşım görevi her döngüde kullanıcı başına tek sefer.
 
-**Tekrar açılma** — şu iki koşuldan biri sağlanınca (hangisi önce olursa):
-- KOŞUL A: Son açılıştan bu yana 6 ay geçti VE bu 6 ay içinde en az 5 paket satın alındı. (Süre + minimum alım birlikte.)
-- KOŞUL B: Son açılıştan bu yana toplam 10 paket satın alındı (süreden bağımsız hızlandırma — örn. 3 ayda 10 paket alırsa 3. ayda açılır, 6 ay beklemez).
-
-Her sosyal paylaşım görevi her döngüde kullanıcı başına tek sefer.
-
-**Bağımlılık:** Bu sistem ödeme (Paddle) + kullanıcı kredi sistemi kurulduktan sonra çalışır. "Kaç paket alındı" ve "ne zaman" bilgisi ödeme kayıtlarından gelir. Şu an sadece görünüm var, gerçek mantık bağlanmadı.
+NOT: Bu sistem ödeme (Paddle) + kullanıcı kredi sistemi kurulduktan sonra çalışır. "Kaç arkadaş satın aldı", "kaç paket alındı", "ne zaman" bilgileri ödeme/satın alma kayıtlarından gelir. Şu an sadece kredi okuma var (Supabase profiles), harcama ve ödeme henüz bağlanmadı.
