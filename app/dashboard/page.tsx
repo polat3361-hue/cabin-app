@@ -18,6 +18,15 @@ interface Photo {
   name: string;
 }
 
+interface KombinPart {
+  outfitName: string;
+  brand: string;
+  price: string;
+  link?: string;
+  img: string;
+  category: string;
+}
+
 interface TryonRecord {
   id: number;
   resultImg: string;
@@ -29,6 +38,8 @@ interface TryonRecord {
   category: string;
   date: string;
   liked: boolean;
+  isKombin?: boolean;
+  kombinParts?: KombinPart[];
 }
 
 export default function DashboardPage() {
@@ -76,10 +87,11 @@ export default function DashboardPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [tryons, setTryons] = useState<TryonRecord[]>([]);
   const [currentTryonId, setCurrentTryonId] = useState<number | null>(null);
-  const [wardrobeFilter, setWardrobeFilter] = useState<'Tümü' | 'Beğendiklerim'>('Tümü');
+  const [wardrobeFilter, setWardrobeFilter] = useState<'Tümü' | 'Beğendiklerim' | 'Kombinler'>('Tümü');
   const [tryonSelectMode, setTryonSelectMode] = useState(false);
   const [selectedTryonIds, setSelectedTryonIds] = useState<Set<number>>(new Set());
   const [hoveredTryonId, setHoveredTryonId] = useState<number | null>(null);
+  const [expandedTryonId, setExpandedTryonId] = useState<number | null>(null);
   const [likeToast, setLikeToast] = useState(false);
   const [bucketPhotos, setBucketPhotos] = useState<{name: string, url: string}[]>([]);
   const [loadingBucketPhotos, setLoadingBucketPhotos] = useState(false);
@@ -397,6 +409,10 @@ export default function DashboardPage() {
         if (tryons.length < 250) {
           const capturedOutfit = selectedOutfit;
           const capturedCategory = category;
+          const capturedIsKombin = isKombin;
+          const capturedKombinParts: KombinPart[] = kombinItems
+            .map(ki => { const o = outfits.find(x => x.id === ki.outfitId); return o ? { outfitName: o.name, brand: o.brand || '—', price: o.price || '—', link: o.link, img: o.img, category: ki.category } : null; })
+            .filter(Boolean) as KombinPart[];
           ;(async () => {
             try {
               const resp = await fetch(data.output);
@@ -409,13 +425,15 @@ export default function DashboardPage() {
                 id: ts,
                 resultImg: urlData.publicUrl,
                 outfitImg: capturedOutfit.img,
-                outfitName: capturedOutfit.name,
+                outfitName: capturedIsKombin && capturedKombinParts.length > 0 ? `Kombin (${capturedKombinParts.length} parça)` : capturedOutfit.name,
                 brand: capturedOutfit.brand || '—',
                 price: capturedOutfit.price || '—',
                 link: capturedOutfit.link,
                 category: capturedCategory,
                 date: new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
                 liked: false,
+                isKombin: capturedIsKombin && capturedKombinParts.length > 0,
+                kombinParts: capturedIsKombin && capturedKombinParts.length > 0 ? capturedKombinParts : undefined,
               };
               setTryons(prev => {
                 const updated = [record, ...prev].slice(0, 250);
@@ -1043,7 +1061,7 @@ export default function DashboardPage() {
             )}
 
             {activeMenu === 'Gardırobum' && (() => {
-              const filtered = wardrobeFilter === 'Beğendiklerim' ? tryons.filter(t => t.liked) : tryons;
+              const filtered = wardrobeFilter === 'Beğendiklerim' ? tryons.filter(t => t.liked) : wardrobeFilter === 'Kombinler' ? tryons.filter(t => t.isKombin) : tryons;
               return (
                 <div style={{ padding: 24 }}>
                   {/* Header */}
@@ -1074,10 +1092,14 @@ export default function DashboardPage() {
 
                   {/* Filter tabs */}
                   {!tryonSelectMode && (
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                      {(['Tümü', 'Beğendiklerim'] as const).map(f => (
-                        <button key={f} onClick={() => setWardrobeFilter(f)} style={{ padding: '5px 14px', borderRadius: 20, border: `1.5px solid ${wardrobeFilter === f ? '#7c3aed' : '#e5e7eb'}`, background: wardrobeFilter === f ? '#f5f3ff' : '#fff', color: wardrobeFilter === f ? '#7c3aed' : '#6b7280', fontSize: 12, fontWeight: wardrobeFilter === f ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          {f === 'Beğendiklerim' ? `❤️ Beğendiklerim (${tryons.filter(t => t.liked).length})` : `Tümü (${tryons.length})`}
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                      {([
+                        { key: 'Tümü',         label: `Tümü (${tryons.length})` },
+                        { key: 'Beğendiklerim', label: `❤️ Beğendiklerim (${tryons.filter(t => t.liked).length})` },
+                        { key: 'Kombinler',     label: `⭐ Kombinler (${tryons.filter(t => t.isKombin).length})` },
+                      ] as { key: 'Tümü' | 'Beğendiklerim' | 'Kombinler'; label: string }[]).map(({ key, label }) => (
+                        <button key={key} onClick={() => setWardrobeFilter(key)} style={{ padding: '5px 14px', borderRadius: 20, border: `1.5px solid ${wardrobeFilter === key ? '#7c3aed' : '#e5e7eb'}`, background: wardrobeFilter === key ? '#f5f3ff' : '#fff', color: wardrobeFilter === key ? '#7c3aed' : '#6b7280', fontSize: 12, fontWeight: wardrobeFilter === key ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {label}
                         </button>
                       ))}
                     </div>
@@ -1097,6 +1119,10 @@ export default function DashboardPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
                       {filtered.map((t: TryonRecord) => {
                         const isSel = selectedTryonIds.has(t.id);
+                        const isExpanded = expandedTryonId === t.id;
+                        const totalPrice = t.isKombin && t.kombinParts
+                          ? t.kombinParts.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0)
+                          : null;
                         return (
                           <div key={t.id}
                             onMouseEnter={() => setHoveredTryonId(t.id)}
@@ -1104,16 +1130,24 @@ export default function DashboardPage() {
                             onClick={() => {
                               if (tryonSelectMode) {
                                 setSelectedTryonIds(prev => { const next = new Set(prev); next.has(t.id) ? next.delete(t.id) : next.add(t.id); return next; });
+                              } else if (t.isKombin) {
+                                setExpandedTryonId(isExpanded ? null : t.id);
                               }
                             }}
-                            style={{ background: '#fff', border: `2px solid ${isSel ? '#7c3aed' : '#ede9fe'}`, borderRadius: 12, overflow: 'hidden', boxShadow: isSel ? '0 0 0 3px rgba(124,58,237,0.15)' : '0 2px 8px rgba(0,0,0,.05)', cursor: tryonSelectMode ? 'pointer' : 'default' }}>
+                            style={{ background: '#fff', border: `2px solid ${isSel ? '#7c3aed' : t.isKombin ? '#c4b5fd' : '#ede9fe'}`, borderRadius: 12, overflow: 'hidden', boxShadow: isSel ? '0 0 0 3px rgba(124,58,237,0.15)' : '0 2px 8px rgba(0,0,0,.05)', cursor: tryonSelectMode ? 'pointer' : t.isKombin ? 'pointer' : 'default' }}>
                             <div style={{ aspectRatio: '3/4', overflow: 'hidden', position: 'relative' }}>
                               <img src={t.resultImg} alt={t.outfitName} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+                              {/* Kombin badge */}
+                              {t.isKombin && !tryonSelectMode && (
+                                <div style={{ position: 'absolute', top: 8, left: 8, background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 3 }}>
+                                  ⭐ Kombin · {t.kombinParts?.length ?? 0} parça
+                                </div>
+                              )}
                               {t.liked && !tryonSelectMode && (
                                 <div style={{ position: 'absolute', top: 8, right: 8, fontSize: 16 }}>❤️</div>
                               )}
                               {!tryonSelectMode && hoveredTryonId === t.id && (
-                                <button onClick={e => { e.stopPropagation(); deleteTryon(t.id); }} style={{ position: 'absolute', top: 6, left: 6, width: 22, height: 22, borderRadius: '50%', background: '#dc2626', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>×</button>
+                                <button onClick={e => { e.stopPropagation(); deleteTryon(t.id); }} style={{ position: 'absolute', bottom: 6, left: 6, width: 22, height: 22, borderRadius: '50%', background: '#dc2626', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>×</button>
                               )}
                               {tryonSelectMode && (
                                 <div style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: '50%', background: isSel ? '#7c3aed' : 'rgba(0,0,0,0.25)', border: isSel ? 'none' : '2px solid rgba(255,255,255,0.7)', color: '#fff', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{isSel ? '✓' : ''}</div>
@@ -1121,23 +1155,53 @@ export default function DashboardPage() {
                             </div>
                             <div style={{ padding: 10 }}>
                               <div style={{ fontSize: 11, fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>{t.outfitName}</div>
-                              {t.brand && t.brand !== '—' && (
+                              {!t.isKombin && t.brand && t.brand !== '—' && (
                                 <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 2 }}>{t.brand}</div>
                               )}
-                              {t.price && t.price !== '—' && !isNaN(parseFloat(t.price)) && (
+                              {!t.isKombin && t.price && t.price !== '—' && !isNaN(parseFloat(t.price)) && (
                                 <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', marginBottom: 4 }}>
                                   {parseFloat(t.price).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₺
+                                </div>
+                              )}
+                              {t.isKombin && totalPrice != null && totalPrice > 0 && (
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed', marginBottom: 4 }}>
+                                  Toplam: {totalPrice.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₺
                                 </div>
                               )}
                               <div style={{ fontSize: 9, color: '#d1d5db', marginBottom: 6 }}>{t.date}</div>
                               {!tryonSelectMode && (
                                 <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
-                                  {t.link && (
+                                  {!t.isKombin && t.link && (
                                     <a href={t.link} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: 'block', padding: '5px', borderRadius: 7, background: 'linear-gradient(135deg,#fb923c,#f97316)', color: '#fff', fontSize: 10, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>Satın Al</a>
+                                  )}
+                                  {t.isKombin && (
+                                    <div style={{ flex: 1, padding: '5px', borderRadius: 7, background: '#f5f3ff', color: '#7c3aed', fontSize: 10, fontWeight: 600, textAlign: 'center' }}>
+                                      {isExpanded ? '▲ Kapat' : '▼ Parçaları gör'}
+                                    </div>
                                   )}
                                   <button onClick={e => { e.stopPropagation(); downloadImage(t.resultImg, `cabin-${t.outfitName.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '_')}.jpg`); }} style={{ padding: '5px 7px', borderRadius: 7, border: '1px solid #ede9fe', background: '#f5f3ff', color: '#7c3aed', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0 }}>
                                     <Download size={11} />İndir
                                   </button>
+                                </div>
+                              )}
+                              {/* Kombin parts expanded */}
+                              {t.isKombin && isExpanded && t.kombinParts && (
+                                <div style={{ marginTop: 8, borderTop: '1px solid #f0eef8', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                  {t.kombinParts.map((p, pi) => (
+                                    <div key={pi} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                      <img src={p.img} style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 10, fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.outfitName}</div>
+                                        <div style={{ fontSize: 9, color: '#9ca3af', textTransform: 'uppercase' }}>{p.brand} · {p.category}</div>
+                                        {p.price && p.price !== '—' && !isNaN(parseFloat(p.price)) && (
+                                          <div style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed' }}>{parseFloat(p.price).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₺</div>
+                                        )}
+                                      </div>
+                                      {p.link && (
+                                        <a href={p.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ padding: '4px 7px', borderRadius: 6, background: '#fb923c', color: '#fff', fontSize: 9, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>Al</a>
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </div>
