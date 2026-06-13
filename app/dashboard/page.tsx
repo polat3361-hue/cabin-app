@@ -242,14 +242,14 @@ export default function DashboardPage() {
     try {
       const r = await fetch('/api/fetch-product?url=' + encodeURIComponent(link.trim()));
       const d = await r.json();
-      if (d.success && d.image) {
+      if (d.image) {
         const o: Outfit = { id: Date.now(), name: d.name || 'Kıyafet', brand: d.brand || '—', price: d.price || '—', img: d.image, link: link.trim() };
         saveOutfits([o, ...outfits]);
         setSelectedOutfit(o);
         setStatus('✅ Eklendi!');
         setLink('');
         setTimeout(() => setStatus(''), 3000);
-      } else { setStatus('❌ Görsel çekilemedi'); setTimeout(() => setStatus(''), 3000); }
+      } else { setStatus('❌ Ürün görseli alınamadı'); setTimeout(() => setStatus(''), 3000); }
     } catch { setStatus('❌ Bağlantı hatası'); setTimeout(() => setStatus(''), 3000); }
   }
 
