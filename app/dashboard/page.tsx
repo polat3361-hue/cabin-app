@@ -823,7 +823,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#7c3aed' }}>{kombinProgress ? `Kombin hazırlanıyor... ${kombinProgress}` : 'Giydiriliyor...'}</div>
-                        <div style={{ fontSize: 11, color: '#9ca3af' }}>{isKombin && kombinItems.length > 1 ? `${kombinItems.length} parça × ~30sn` : '20-40 saniye sürebilir'}</div>
+                        <div style={{ fontSize: 11, color: '#9ca3af' }}>{isKombin && kombinItems.length > 1 ? `${kombinItems.length} parça × ~20sn` : 'HD Kalite: 15-25 saniye sürebilir'}</div>
                       </div>
                     ) : result ? (
                       <>

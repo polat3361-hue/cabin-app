@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   const prompt = accessoryPrompts[normalized] ?? ''
   const inputs = isAccessory
     ? { product_image: garmentImage, model_image: modelImage, ...(prompt ? { prompt } : {}) }
-    : { model_image: modelImage, garment_image: garmentImage, category: categoryMap[normalized] ?? 'auto', garment_photo_type: 'auto' }
+    : { model_image: modelImage, garment_image: garmentImage, category: categoryMap[normalized] ?? 'auto', garment_photo_type: 'auto', mode: 'quality' }
 
   try {
     const runRes = await fetch('https://api.fashn.ai/v1/run', {
