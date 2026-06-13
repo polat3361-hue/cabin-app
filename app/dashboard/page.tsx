@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Zap, Clock, Heart, ShoppingBag, Store, CreditCard, User, Settings, Gift, Bell, Shirt, Scissors, Sparkles, Wind, Footprints, Glasses, HardHat, Gem, Images, RotateCw } from 'lucide-react';
+import { Zap, Clock, Heart, ShoppingBag, Store, CreditCard, User, Settings, Gift, Bell, Shirt, Scissors, Sparkles, Wind, Footprints, Glasses, HardHat, Gem, Images, RotateCw, Tag } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface Outfit {
@@ -118,9 +118,9 @@ export default function DashboardPage() {
   }
 
   function saveOutfits(o: Outfit[]) {
-    const limited = o.slice(0, 50);
+    const limited = o.slice(0, 120);
     setOutfits(limited);
-    safeSet('cabin_outfits', limited, 50);
+    safeSet('cabin_outfits', limited, 120);
   }
 
   function safeSet(key: string, value: any, limit = 20) {
@@ -238,6 +238,11 @@ export default function DashboardPage() {
 
   async function fetchLink() {
     if (!link.trim()) return;
+    if (outfits.length >= 120) {
+      setStatus('⚠️ Yeni ürün eklemek için önce bazılarını sil (maks. 120)');
+      setTimeout(() => setStatus(''), 4000);
+      return;
+    }
     setStatus('⏳ Yükleniyor...');
     try {
       const r = await fetch('/api/fetch-product?url=' + encodeURIComponent(link.trim()));
@@ -803,6 +808,55 @@ export default function DashboardPage() {
               </div>
             )}
 
+            {activeMenu === 'Ürünlerim' && (
+              <div style={{ padding: 24 }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Tag size={20} /> Ürünlerim
+                </div>
+                <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 16 }}>
+                  Link'ten çektiğin ürünler — {outfits.length} / 120
+                </div>
+                {outfits.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af', fontSize: 13 }}>
+                    <div style={{ fontSize: 48, marginBottom: 12 }}>🏷️</div>
+                    Henüz ürün eklemediniz. Ana ekrandan ürün linki yapıştırın.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+                    {outfits.map((o: Outfit) => (
+                      <div key={o.id} style={{ background: '#fff', border: '1px solid #ede9fe', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)' }}>
+                        <div style={{ aspectRatio: '3/4', overflow: 'hidden', position: 'relative' }}>
+                          <img src={o.img} alt={o.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+                          {o.brand && o.brand !== '—' && (
+                            <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              {o.brand}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ padding: 10 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>{o.name}</div>
+                          {o.price && o.price !== '—' && !isNaN(parseFloat(o.price)) && (
+                            <div style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>
+                              {parseFloat(o.price).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₺
+                            </div>
+                          )}
+                          {o.link ? (
+                            <a href={o.link} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 8, padding: '6px', borderRadius: 8, background: 'linear-gradient(135deg,#fb923c,#f97316)', color: '#fff', fontSize: 11, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>
+                              Satın Al
+                            </a>
+                          ) : (
+                            <button onClick={() => { setSelectedOutfit(o); setActiveMenu('CaBin'); }} style={{ marginTop: 8, width: '100%', padding: '6px', borderRadius: 8, border: 'none', background: '#f5f3ff', color: '#7c3aed', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                              ⚡ Dene
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeMenu === 'Beğendiklerim' && (
               <div style={{ padding: 24 }}>
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>❤️ Beğendiklerim</div>
@@ -1058,7 +1112,7 @@ export default function DashboardPage() {
       <div style={{ height: 56, background: '#fff', borderTop: '1px solid #ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexShrink: 0, boxShadow: '0 -2px 8px rgba(0,0,0,.05)' }}>
         {[
           { Icon: Zap,         label: 'Sanal Dene',    menu: 'CaBin' },
-          { Icon: Heart,       label: 'Kombinlerim',  menu: 'Beğendiklerim' },
+          { Icon: Tag,         label: 'Ürünlerim',    menu: 'Ürünlerim' },
           { Icon: Store,       label: 'AVM',          menu: 'AVM' },
           { Icon: ShoppingBag, label: 'Gardırobum',   menu: 'Gardırobum' },
           { Icon: Images,      label: 'Fotoğraflarım', menu: 'Fotoğraflarım' },
