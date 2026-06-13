@@ -341,8 +341,18 @@ export default function DashboardPage() {
     } catch { setStatus('❌ Bağlantı hatası'); setTimeout(() => setStatus(''), 3000); }
   }
 
+  function kombinPartCost(cat: string): number {
+    const n = cat.replace(/ü/g,'u').replace(/Ü/g,'U').replace(/ş/g,'s').replace(/Ş/g,'S')
+                 .replace(/ı/g,'i').replace(/İ/g,'I').replace(/ğ/g,'g').replace(/Ğ/g,'G')
+                 .replace(/ç/g,'c').replace(/Ç/g,'C').replace(/ö/g,'o').replace(/Ö/g,'O');
+    return ['Ayakkabi','Canta','Gozluk','Aksesuar','Taki','Sapka'].includes(n) ? 2 : 1;
+  }
+
   async function doTry() {
     if (!selectedPhoto || !selectedOutfit || credits <= 0) return;
+    const capturedCost = isKombin && kombinItems.length > 0
+      ? kombinItems.reduce((sum, ki) => sum + kombinPartCost(ki.category), 0)
+      : 1;
     setLoading(true);
     setResult(null);
     setCombinations([]);
@@ -402,7 +412,7 @@ export default function DashboardPage() {
         const updatedHistory = [historyItem, ...history].slice(0, 50);
         setHistory(updatedHistory);
         safeSet('cabin_history', updatedHistory, 30);
-        setCredits(c => c - 1);
+        setCredits(c => c - capturedCost);
         setStatus('✅ Tamamlandı!');
         setTimeout(() => setStatus(''), 3000);
         // Upload result image to Supabase for permanent storage (FASHN URLs expire in 72h)
@@ -654,6 +664,9 @@ export default function DashboardPage() {
                               <option>Dış Giyim</option>
                               <option>Gözlük</option>
                             </select>
+                            <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 4, background: kombinPartCost(ki.category) === 2 ? '#fdf2f8' : '#f5f3ff', color: kombinPartCost(ki.category) === 2 ? '#ec4899' : '#7c3aed', whiteSpace: 'nowrap' }}>
+                              {kombinPartCost(ki.category)} ⚡
+                            </span>
                             <button onClick={() => setKombinItems(prev => prev.filter((_, idx) => idx !== i))} style={{ width: 18, height: 18, borderRadius: '50%', background: '#fee2e2', color: '#dc2626', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
                           </div>
                         ) : null;
@@ -689,7 +702,7 @@ export default function DashboardPage() {
                     </button>
                   ))}
                   <button onClick={() => setIsKombin(!isKombin)} style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${isKombin ? '#f59e0b' : '#e5e7eb'}`, background: isKombin ? '#fef3c7' : '#fff', color: isKombin ? '#d97706' : '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                    ✨ Kombin {isKombin ? '(5 Kredi)' : 'Modu'}
+                    ✨ Kombin {isKombin ? `(${kombinItems.length > 0 ? kombinItems.reduce((s, ki) => s + kombinPartCost(ki.category), 0) : '?'} Kredi)` : 'Modu'}
                   </button>
                 </div>
 
