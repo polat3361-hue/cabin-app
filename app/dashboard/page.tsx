@@ -51,7 +51,8 @@ export default function DashboardPage() {
   const [result, setResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [kombinProgress, setKombinProgress] = useState('');
-  const [credits, setCredits] = useState(114);
+  const [credits, setCredits] = useState(0);
+  const [creditsLoaded, setCreditsLoaded] = useState(false);
   const [link, setLink] = useState('');
   const [status, setStatus] = useState('');
   const [photoStatus, setPhotoStatus] = useState('');
@@ -106,11 +107,19 @@ export default function DashboardPage() {
   const outfitCamRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (data?.user) {
         const meta = data.user.user_metadata;
         setUserName(meta?.full_name || data.user.email?.split('@')[0] || 'Kullanıcı');
         setUserEmail(data.user.email || '');
+        // Gerçek krediyi Supabase profiles tablosundan oku
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('credits')
+          .eq('id', data.user.id)
+          .single();
+        if (profile?.credits != null) setCredits(profile.credits);
+        setCreditsLoaded(true);
       } else { window.location.href = '/login'; }
     });
     supabase.auth.getSession().then(({ data }) => {
@@ -554,7 +563,7 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div onClick={() => setActiveMenu('Krediler')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, background: '#f5f3ff', border: '1px solid #ede9fe' }}>
             <span style={{ fontSize: 13 }}>⚡</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>{credits} Kredi</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>{creditsLoaded ? `${credits} Kredi` : '... Kredi'}</span>
           </div>
           <button onClick={() => setActiveMenu('Davet Et')} className="gift-btn" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', cursor: 'pointer', color: '#fff', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'inherit', transition: 'opacity .15s' }}>
             <Gift size={13} />
