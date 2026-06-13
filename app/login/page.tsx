@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
@@ -10,6 +10,12 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
+  const [refCode, setRefCode] = useState('');
+
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref) { setRefCode(ref); setTab('register'); }
+  }, []);
 
   async function handleSubmit() {
     setLoading(true);
@@ -19,7 +25,9 @@ export default function LoginPage() {
       if (error) setMsg(error.message);
       else window.location.href = '/dashboard';
     } else {
-      const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
+      const metadata: Record<string, string> = { full_name: name };
+      if (refCode) metadata.ref_code = refCode;
+      const { error } = await supabase.auth.signUp({ email, password, options: { data: metadata } });
       if (error) setMsg(error.message);
       else setMsg('Kayıt başarılı! E-postanı kontrol et.');
     }

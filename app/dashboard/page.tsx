@@ -73,7 +73,8 @@ export default function DashboardPage() {
   const [phoneNumber, setPhoneNumber] = useState('+90 5XX XXX XX XX');
   const [profilePhoto, setProfilePhoto] = useState('');
   const profilePhotoRef = useRef<HTMLInputElement>(null);
-  const [referralCode] = useState(() => Math.random().toString(36).substring(2, 8).toUpperCase());
+  const [referralCode, setReferralCode] = useState('');
+  const [referralCount, setReferralCount] = useState(0);
   const [notifyDone, setNotifyDone] = useState(true);
   const [notifyCredit, setNotifyCredit] = useState(true);
   const [notifyNews, setNotifyNews] = useState(false);
@@ -114,11 +115,18 @@ export default function DashboardPage() {
         setUserEmail(data.user.email || '');
         const { data: profile } = await supabase
           .from('profiles')
-          .select('credits')
+          .select('credits, referral_code')
           .eq('id', data.user.id)
           .single();
         if (profile?.credits != null) setCredits(profile.credits);
+        if (profile?.referral_code) setReferralCode(profile.referral_code);
         setCreditsLoaded(true);
+        // Davet sayısını getir (RLS: referred_by = auth.uid() izni gerekir)
+        supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true })
+          .eq('referred_by', data.user.id)
+          .then(({ count }) => setReferralCount(count ?? 0));
       } else { window.location.href = '/login'; }
     });
     const saved = localStorage.getItem('cabin_photos_v2');
@@ -1540,19 +1548,26 @@ export default function DashboardPage() {
                     </div>
 
                     {/* İlerleme */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                       <div style={{ fontSize: 12, color: '#9ca3af' }}>İlerleme</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>0 / 5 arkadaş</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>{referralCount} / 5 arkadaş</div>
                     </div>
+                    {referralCount > 0 && (
+                      <div style={{ fontSize: 11, color: '#7c3aed', marginBottom: 6 }}>
+                        🎉 {referralCount} kişi davetinle kayıt oldu
+                      </div>
+                    )}
                     <div style={{ height: 6, borderRadius: 4, background: '#ede9fe', marginBottom: 14 }}>
-                      <div style={{ height: '100%', width: '0%', borderRadius: 4, background: 'linear-gradient(90deg,#7c3aed,#ec4899)' }} />
+                      <div style={{ height: '100%', width: `${Math.min((referralCount / 5) * 100, 100)}%`, borderRadius: 4, background: 'linear-gradient(90deg,#7c3aed,#ec4899)', transition: 'width .5s ease' }} />
                     </div>
 
                     {/* Davet linki */}
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 6 }}>🔗 Davet Linkin</div>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <div style={{ flex: 1, padding: '10px 12px', borderRadius: 8, border: '1px solid #ede9fe', background: '#faf7ff', fontSize: 11, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>cabin.app/login?ref={referralCode}</div>
-                      <button onClick={() => { navigator.clipboard.writeText(`cabin.app/login?ref=${referralCode}`); setStatus('✅ Link kopyalandı!'); setTimeout(() => setStatus(''), 3000); }} style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>Kopyala</button>
+                      <div style={{ flex: 1, padding: '10px 12px', borderRadius: 8, border: '1px solid #ede9fe', background: '#faf7ff', fontSize: 11, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {referralCode ? `cabin.app/login?ref=${referralCode}` : '...'}
+                      </div>
+                      <button onClick={() => { if (!referralCode) return; navigator.clipboard.writeText(`cabin.app/login?ref=${referralCode}`); setStatus('✅ Link kopyalandı!'); setTimeout(() => setStatus(''), 3000); }} disabled={!referralCode} style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: referralCode ? '#7c3aed' : '#e5e7eb', color: '#fff', fontSize: 12, fontWeight: 600, cursor: referralCode ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap' }}>Kopyala</button>
                     </div>
                   </div>
 
