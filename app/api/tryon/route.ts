@@ -10,9 +10,20 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.FASHN_API_KEY
   if (!apiKey) return NextResponse.json({ error: 'API key yok' }, { status: 500 })
 
-  const productCats = ['Ayakkabi', 'Canta', 'Gozluk', 'Aksesuar', 'Taki']
+  // Aksesuar/ayakkabı kategorileri → tryon-max
+  const accessoryCats = ['Ayakkabi', 'Canta', 'Gozluk', 'Aksesuar', 'Taki', 'Sapka']
+  // Kıyafet kategorisi → tryon-v1.6 category map
   const categoryMap: Record<string, string> = {
     'Ust': 'tops', 'Alt': 'bottoms', 'Elbise': 'one-pieces', 'Ceket': 'tops', 'Dis Giyim': 'tops'
+  }
+  // tryon-max prompt'ları: doğal yerleştirme için yönlendirme
+  const accessoryPrompts: Record<string, string> = {
+    'Ayakkabi': 'Place the shoes naturally on the person\'s feet',
+    'Sapka':    'Place the hat naturally on the person\'s head',
+    'Gozluk':   'Place the glasses naturally on the person\'s face',
+    'Canta':    'Place the bag naturally on the person\'s shoulder or hand',
+    'Taki':     'Place the jewelry naturally on the person',
+    'Aksesuar': '',
   }
 
   const normalized = category
@@ -25,11 +36,12 @@ export async function POST(req: NextRequest) {
 
   console.log('category:', category, 'normalized:', normalized)
 
-  const isProduct = productCats.includes(normalized)
-  const modelName = isProduct ? 'product-to-model' : 'tryon-v1.6'
+  const isAccessory = accessoryCats.includes(normalized)
+  const modelName = isAccessory ? 'tryon-max' : 'tryon-v1.6'
 
-  const inputs = isProduct
-    ? { product_image: garmentImage, model_image: modelImage }
+  const prompt = accessoryPrompts[normalized] ?? ''
+  const inputs = isAccessory
+    ? { product_image: garmentImage, model_image: modelImage, ...(prompt ? { prompt } : {}) }
     : { model_image: modelImage, garment_image: garmentImage, category: categoryMap[normalized] ?? 'auto', garment_photo_type: 'auto' }
 
   try {
