@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Zap, Clock, Heart, ShoppingBag, Store, CreditCard, User, Settings, Gift, Bell, Shirt, Scissors, Sparkles, Wind, Footprints, Glasses, HardHat, Gem, Images, RotateCw, Tag } from 'lucide-react';
+import { Zap, Clock, Heart, ShoppingBag, Store, CreditCard, User, Settings, Gift, Bell, Shirt, Scissors, Sparkles, Wind, Footprints, Glasses, HardHat, Gem, Images, RotateCw, Tag, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface Outfit {
@@ -854,7 +854,7 @@ export default function DashboardPage() {
                         <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{outfits.length} / 120 ürün</div>
                       </div>
                       {outfits.length > 0 && (
-                        <button onClick={() => setSelectMode(true)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 }}>Seç</button>
+                        <button onClick={() => setSelectMode(true)} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}><Trash2 size={14} />Seç</button>
                       )}
                     </>
                   )}
