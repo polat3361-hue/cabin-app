@@ -58,6 +58,9 @@ export default function DashboardPage() {
   const [isKombin, setIsKombin] = useState(false);
   const [kombinItems, setKombinItems] = useState<{outfitId: number, category: string}[]>([]);
   const [hoveredPhotoId, setHoveredPhotoId] = useState<number | null>(null);
+  const [hoveredOutfitId, setHoveredOutfitId] = useState<number | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [likeToast, setLikeToast] = useState(false);
   const [bucketPhotos, setBucketPhotos] = useState<{name: string, url: string}[]>([]);
   const [loadingBucketPhotos, setLoadingBucketPhotos] = useState(false);
@@ -121,6 +124,22 @@ export default function DashboardPage() {
     const limited = o.slice(0, 120);
     setOutfits(limited);
     safeSet('cabin_outfits', limited, 120);
+  }
+
+  function deleteOutfit(id: number) {
+    const updated = outfits.filter(o => o.id !== id);
+    saveOutfits(updated);
+    if (selectedOutfit?.id === id) setSelectedOutfit(updated.length > 0 ? updated[0] : null);
+  }
+
+  function deleteSelected() {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`${selectedIds.size} ürün silinecek, emin misiniz?`)) return;
+    const updated = outfits.filter(o => !selectedIds.has(o.id));
+    saveOutfits(updated);
+    if (selectedOutfit && selectedIds.has(selectedOutfit.id)) setSelectedOutfit(updated.length > 0 ? updated[0] : null);
+    setSelectedIds(new Set());
+    setSelectMode(false);
   }
 
   function safeSet(key: string, value: any, limit = 20) {
@@ -689,9 +708,16 @@ export default function DashboardPage() {
                   <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 8, letterSpacing: '.3px' }}>Farklı ürünleri dene</div>
                   <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
                     {outfits.slice(0, 20).map(o => (
-                      <div key={o.id} onClick={() => { if (!isKombin) setSelectedOutfit(o); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: isKombin ? 'default' : 'pointer', flexShrink: 0, width: 70 }}>
+                      <div key={o.id}
+                        onMouseEnter={() => setHoveredOutfitId(o.id)}
+                        onMouseLeave={() => setHoveredOutfitId(null)}
+                        onClick={() => { if (!isKombin) setSelectedOutfit(o); }}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: isKombin ? 'default' : 'pointer', flexShrink: 0, width: 70 }}>
                         <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', border: `2px solid ${selectedOutfit?.id === o.id ? '#7c3aed' : '#e5e7eb'}`, position: 'relative' }}>
                           <img src={o.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          {!isKombin && hoveredOutfitId === o.id && (
+                            <button onClick={e => { e.stopPropagation(); deleteOutfit(o.id); }} style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: '#dc2626', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, fontWeight: 700 }}>×</button>
+                          )}
                           {isKombin && kombinItems.length < 4 && !kombinItems.find(k => k.outfitId === o.id) && (
                             <button onClick={e => { e.stopPropagation(); setKombinItems(prev => [...prev, { outfitId: o.id, category: 'Üst' }]); }} style={{ position: 'absolute', top: 2, right: 2, width: 22, height: 22, borderRadius: '50%', background: '#7c3aed', color: '#fff', border: 'none', fontSize: 14, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
                           )}
@@ -810,12 +836,30 @@ export default function DashboardPage() {
 
             {activeMenu === 'Ürünlerim' && (
               <div style={{ padding: 24 }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Tag size={20} /> Ürünlerim
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+                  {selectMode ? (
+                    <>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#374151', paddingTop: 2 }}>{selectedIds.size} ürün seçildi</span>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        <button onClick={() => setSelectedIds(new Set(outfits.map(o => o.id)))} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Tümünü Seç</button>
+                        <button onClick={deleteSelected} disabled={selectedIds.size === 0} style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: selectedIds.size === 0 ? '#f3f4f6' : '#dc2626', color: selectedIds.size === 0 ? '#9ca3af' : '#fff', fontSize: 12, fontWeight: 600, cursor: selectedIds.size === 0 ? 'default' : 'pointer', fontFamily: 'inherit' }}>Seçilenleri Sil</button>
+                        <button onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>İptal</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 8 }}><Tag size={20} /> Ürünlerim</div>
+                        <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{outfits.length} / 120 ürün</div>
+                      </div>
+                      {outfits.length > 0 && (
+                        <button onClick={() => setSelectMode(true)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 }}>Seç</button>
+                      )}
+                    </>
+                  )}
                 </div>
-                <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 16 }}>
-                  Link'ten çektiğin ürünler — {outfits.length} / 120
-                </div>
+
                 {outfits.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af', fontSize: 13 }}>
                     <div style={{ fontSize: 48, marginBottom: 12 }}>🏷️</div>
@@ -823,35 +867,53 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
-                    {outfits.map((o: Outfit) => (
-                      <div key={o.id} style={{ background: '#fff', border: '1px solid #ede9fe', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)' }}>
-                        <div style={{ aspectRatio: '3/4', overflow: 'hidden', position: 'relative' }}>
-                          <img src={o.img} alt={o.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
-                          {o.brand && o.brand !== '—' && (
-                            <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                              {o.brand}
-                            </div>
-                          )}
+                    {outfits.map((o: Outfit) => {
+                      const isSelected = selectedIds.has(o.id);
+                      return (
+                        <div key={o.id}
+                          onClick={() => {
+                            if (selectMode) {
+                              setSelectedIds(prev => {
+                                const next = new Set(prev);
+                                next.has(o.id) ? next.delete(o.id) : next.add(o.id);
+                                return next;
+                              });
+                            }
+                          }}
+                          style={{ background: '#fff', border: `2px solid ${isSelected ? '#7c3aed' : '#ede9fe'}`, borderRadius: 12, overflow: 'hidden', boxShadow: isSelected ? '0 0 0 3px rgba(124,58,237,0.15)' : '0 2px 8px rgba(0,0,0,.05)', cursor: selectMode ? 'pointer' : 'default' }}>
+                          <div style={{ aspectRatio: '3/4', overflow: 'hidden', position: 'relative' }}>
+                            <img src={o.img} alt={o.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+                            {o.brand && o.brand !== '—' && (
+                              <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                {o.brand}
+                              </div>
+                            )}
+                            {selectMode && (
+                              <div style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: '50%', background: isSelected ? '#7c3aed' : 'rgba(0,0,0,0.25)', border: isSelected ? 'none' : '2px solid rgba(255,255,255,0.7)', color: '#fff', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {isSelected ? '✓' : ''}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ padding: 10 }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>{o.name}</div>
+                            {o.price && o.price !== '—' && !isNaN(parseFloat(o.price)) && (
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>
+                                {parseFloat(o.price).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₺
+                              </div>
+                            )}
+                            {!selectMode && (o.link ? (
+                              <a href={o.link} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 8, padding: '6px', borderRadius: 8, background: 'linear-gradient(135deg,#fb923c,#f97316)', color: '#fff', fontSize: 11, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>
+                                Satın Al
+                              </a>
+                            ) : (
+                              <button onClick={() => { setSelectedOutfit(o); setActiveMenu('CaBin'); }} style={{ marginTop: 8, width: '100%', padding: '6px', borderRadius: 8, border: 'none', background: '#f5f3ff', color: '#7c3aed', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                ⚡ Dene
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                        <div style={{ padding: 10 }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>{o.name}</div>
-                          {o.price && o.price !== '—' && !isNaN(parseFloat(o.price)) && (
-                            <div style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>
-                              {parseFloat(o.price).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₺
-                            </div>
-                          )}
-                          {o.link ? (
-                            <a href={o.link} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 8, padding: '6px', borderRadius: 8, background: 'linear-gradient(135deg,#fb923c,#f97316)', color: '#fff', fontSize: 11, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>
-                              Satın Al
-                            </a>
-                          ) : (
-                            <button onClick={() => { setSelectedOutfit(o); setActiveMenu('CaBin'); }} style={{ marginTop: 8, width: '100%', padding: '6px', borderRadius: 8, border: 'none', background: '#f5f3ff', color: '#7c3aed', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                              ⚡ Dene
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
