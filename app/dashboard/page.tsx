@@ -1,8 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Zap, Clock, Heart, ShoppingBag, Store, CreditCard, User, Settings, Gift, Bell, Shirt, Scissors, Sparkles, Wind, Footprints, Glasses, HardHat, Gem } from 'lucide-react';
+import { Zap, Clock, Heart, ShoppingBag, Store, CreditCard, User, Settings, Gift, Bell, Shirt, Scissors, Sparkles, Wind, Footprints, Glasses, HardHat, Gem, Images } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-const CATEGORIES = ['Üst', 'Alt', 'Elbise', 'Ceket', 'Ayakkabı', 'Gözlük', 'Şapka', 'Takı'];
 
 interface Outfit {
   id: number;
@@ -43,10 +42,6 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [instagramConnected, setInstagramConnected] = useState(false);
-  const [facebookConnected, setFacebookConnected] = useState(false);
-  const [tiktokConnected, setTiktokConnected] = useState(false);
-  const [xConnected, setXConnected] = useState(false);
   const [aiComment, setAiComment] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('+90 5XX XXX XX XX');
@@ -63,8 +58,9 @@ export default function DashboardPage() {
   const [isKombin, setIsKombin] = useState(false);
   const [kombinItems, setKombinItems] = useState<{outfitId: number, category: string}[]>([]);
   const [hoveredPhotoId, setHoveredPhotoId] = useState<number | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [likeToast, setLikeToast] = useState(false);
+  const [bucketPhotos, setBucketPhotos] = useState<{name: string, url: string}[]>([]);
+  const [loadingBucketPhotos, setLoadingBucketPhotos] = useState(false);
   const [uyumScore, setUyumScore] = useState(0);
   const [colorSuggestion, setColorSuggestion] = useState('');
   const [styleTip, setStyleTip] = useState('');
@@ -73,7 +69,6 @@ export default function DashboardPage() {
   const camRef = useRef<HTMLInputElement>(null);
   const outfitRef = useRef<HTMLInputElement>(null);
   const outfitCamRef = useRef<HTMLInputElement>(null);
-  const dropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -113,6 +108,10 @@ export default function DashboardPage() {
     if (savedHistory) setHistory(JSON.parse(savedHistory));
   }, []);
 
+  useEffect(() => {
+    if (activeMenu === 'Fotoğraflarım') fetchBucketPhotos();
+  }, [activeMenu]);
+
   function savePhotos(p: Photo[]) {
     setPhotos(p);
     try { localStorage.setItem('cabin_photos_v2', JSON.stringify(p.map(photo => ({ ...photo, url: photo.url })))); } catch {}
@@ -142,19 +141,56 @@ export default function DashboardPage() {
     safeSet('cabin_wardrobe', limited, 50);
   }
 
-  async function deletePhoto(photo: Photo) {
-    const marker = '/user-photos/';
-    const filename = photo.url.includes(marker) ? photo.url.split(marker)[1] : null;
-    if (filename) {
-      await supabase.storage.from('user-photos').remove([decodeURIComponent(filename)]);
-    }
+  function deletePhoto(photo: Photo) {
     const updated = photos.filter(p => p.id !== photo.id);
     savePhotos(updated);
     if (selectedPhoto?.id === photo.id) {
       setSelectedPhoto(updated.length > 0 ? updated[0] : null);
     }
-    setDeleteConfirmId(null);
     setHoveredPhotoId(null);
+  }
+
+  async function fetchBucketPhotos() {
+    setLoadingBucketPhotos(true);
+    try {
+      const { data, error } = await supabase.storage.from('user-photos').list('', { limit: 200, sortBy: { column: 'created_at', order: 'desc' } });
+      if (!error && data) {
+        const filtered = data.filter(f => f.id && !f.name.startsWith('.'));
+        setBucketPhotos(filtered.map(f => ({
+          name: f.name,
+          url: supabase.storage.from('user-photos').getPublicUrl(f.name).data.publicUrl,
+        })));
+      }
+    } catch {}
+    setLoadingBucketPhotos(false);
+  }
+
+  function addBucketPhotoToActive(url: string, name: string) {
+    if (photos.length >= 8) {
+      setPhotoStatus('⚠️ Aktif listede max 8 fotoğraf var');
+      setTimeout(() => setPhotoStatus(''), 3000);
+      return;
+    }
+    if (photos.find(p => p.url === url)) {
+      setPhotoStatus('Bu fotoğraf zaten listede');
+      setTimeout(() => setPhotoStatus(''), 2000);
+      return;
+    }
+    addPhoto(url, name);
+    setActiveMenu('CaBin');
+  }
+
+  async function deleteBucketPhoto(filename: string) {
+    await supabase.storage.from('user-photos').remove([decodeURIComponent(filename)]);
+    setBucketPhotos(prev => prev.filter(p => p.name !== filename));
+    const publicUrl = supabase.storage.from('user-photos').getPublicUrl(filename).data.publicUrl;
+    const updated = photos.filter(p => p.url !== publicUrl);
+    if (updated.length !== photos.length) {
+      savePhotos(updated);
+      if (selectedPhoto && selectedPhoto.url === publicUrl) {
+        setSelectedPhoto(updated.length > 0 ? updated[0] : null);
+      }
+    }
   }
 
   function addPhoto(url: string, name: string) {
@@ -284,18 +320,6 @@ export default function DashboardPage() {
     finally { setLoading(false); }
   }
 
-  const menuItems = [
-    { icon: <Zap size={18} />,         label: 'CaBin' },
-    { icon: <Clock size={18} />,       label: 'Geçmiş' },
-    { icon: <Heart size={18} />,       label: 'Beğendiklerim' },
-    { icon: <ShoppingBag size={18} />, label: 'Gardırobum' },
-    { icon: <Store size={18} />,       label: 'AVM', badge: 'Yeni' },
-    { icon: <CreditCard size={18} />,  label: 'Krediler' },
-    { icon: <User size={18} />,        label: 'Profil' },
-    { icon: <Settings size={18} />,    label: 'Ayarlar' },
-    { icon: <Gift size={18} />,        label: 'Davet Et' },
-  ];
-
   return (
     <div onClick={() => { setCartOpen(false); setUserMenuOpen(false); }} style={{ fontFamily: "'Inter', sans-serif", background: '#fafafa', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: '#1a1a2e' }}>
       <style>{`
@@ -359,7 +383,7 @@ export default function DashboardPage() {
           <>
             {/* ── LEFT COLUMN (260px) ── */}
             <div style={{ width: 260, background: '#fff', borderRight: '1px solid #ede9fe', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
-              <div style={{ overflowY: 'auto', flex: 1, padding: '16px 14px' }}>
+              <div style={{ overflowY: 'auto', flex: 1, padding: '16px 10px' }}>
 
                 {/* STEP 1 */}
                 <div style={{ marginBottom: 20 }}>
@@ -389,38 +413,27 @@ export default function DashboardPage() {
                     </div>
                   )}
 
-                  {photos.length >= 6 && (
+                  {photos.length >= 8 && (
                     <div style={{ fontSize: 10, color: '#f59e0b', background: '#fef3c7', borderRadius: 8, padding: '6px 10px', marginBottom: 6 }}>
-                      ⚠️ Max 6 fotoğraf. Yeni eklemek için birini sil.
+                      ⚠️ Max 8 fotoğraf. Yeni eklemek için birini kaldır.
                     </div>
                   )}
 
                   {photos.length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {photos.slice(0, 6).map(p => (
-                        <div key={p.id} style={{ position: 'relative', width: 46, height: 46, flexShrink: 0 }}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+                      {photos.slice(0, 8).map(p => (
+                        <div key={p.id} style={{ position: 'relative' }}
                           onMouseEnter={() => setHoveredPhotoId(p.id)}
-                          onMouseLeave={() => { setHoveredPhotoId(null); }}
+                          onMouseLeave={() => setHoveredPhotoId(null)}
                         >
-                          <div onClick={() => setSelectedPhoto(p)} style={{ width: 46, height: 46, borderRadius: 8, overflow: 'hidden', border: `2px solid ${selectedPhoto?.id === p.id ? '#3b82f6' : '#e5e7eb'}`, cursor: 'pointer', transition: 'border-color .15s' }}>
+                          <div onClick={() => setSelectedPhoto(p)} style={{ aspectRatio: '3/4', borderRadius: 8, overflow: 'hidden', border: `2px solid ${selectedPhoto?.id === p.id ? '#3b82f6' : '#e5e7eb'}`, cursor: 'pointer', transition: 'border-color .15s' }}>
                             <img src={p.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
-                          {/* Sil butonu — hover'da veya mobilden hep görünür */}
-                          {hoveredPhotoId === p.id && deleteConfirmId !== p.id && (
+                          {hoveredPhotoId === p.id && (
                             <button
-                              onClick={e => { e.stopPropagation(); setDeleteConfirmId(p.id); }}
+                              onClick={e => { e.stopPropagation(); deletePhoto(p); }}
                               style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, borderRadius: '50%', background: '#ef4444', color: '#fff', border: '2px solid #fff', fontSize: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, padding: 0, lineHeight: 1, fontWeight: 700 }}
                             >✕</button>
-                          )}
-                          {/* Onay overlay */}
-                          {deleteConfirmId === p.id && (
-                            <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.8)', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, zIndex: 11 }}>
-                              <div style={{ fontSize: 8, color: '#fff', fontWeight: 600, textAlign: 'center', lineHeight: 1.3 }}>Sil?</div>
-                              <div style={{ display: 'flex', gap: 3 }}>
-                                <button onClick={() => deletePhoto(p)} style={{ fontSize: 9, padding: '2px 5px', borderRadius: 4, border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>Evet</button>
-                                <button onClick={() => setDeleteConfirmId(null)} style={{ fontSize: 9, padding: '2px 5px', borderRadius: 4, border: 'none', background: '#e5e7eb', color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>Hayır</button>
-                              </div>
-                            </div>
                           )}
                         </div>
                       ))}
@@ -428,7 +441,7 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                <div style={{ height: 1, background: '#f3f4f6', marginBottom: 20 }} />
+                <div style={{ height: 1, background: '#f3f4f6', marginBottom: 28 }} />
 
                 {/* STEP 2 */}
                 <div style={{ marginBottom: 20 }}>
@@ -461,8 +474,6 @@ export default function DashboardPage() {
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#7c3aed' }}>Görseli buraya sürükle bırak</div>
                     <div style={{ fontSize: 10, color: '#9ca3af' }}>veya internetten resim sürükle</div>
                   </div>
-
-                  <button onClick={fetchLink} style={{ width: '100%', padding: '8px', borderRadius: 8, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 6 }}>Ürünü Getir</button>
 
                   <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                     <button onClick={() => outfitCamRef.current?.click()} style={{ flex: 1, padding: '7px 4px', borderRadius: 8, border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#16a34a', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
@@ -845,6 +856,53 @@ export default function DashboardPage() {
               </div>
             )}
 
+            {activeMenu === 'Fotoğraflarım' && (
+              <div style={{ padding: 24 }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}><Images size={20} /> Fotoğraflarım</div>
+                <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 16 }}>Yüklediğin tüm fotoğraflar — sol panelden kaldırsan bile burada durur.</div>
+                {loadingBucketPhotos ? (
+                  <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>⏳ Yükleniyor...</div>
+                ) : bucketPhotos.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af', fontSize: 13 }}>
+                    <div style={{ fontSize: 48, marginBottom: 12 }}>📷</div>
+                    Henüz fotoğraf yüklemediniz
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+                    {bucketPhotos.map(photo => {
+                      const isActive = photos.some(p => p.url === photo.url);
+                      return (
+                        <div key={photo.name} style={{ background: '#fff', border: `1.5px solid ${isActive ? '#3b82f6' : '#ede9fe'}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)' }}>
+                          <div style={{ height: 170, overflow: 'hidden', position: 'relative' }}>
+                            <img src={photo.url} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+                            {isActive && (
+                              <div style={{ position: 'absolute', top: 8, right: 8, background: '#3b82f6', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>✓ Aktif</div>
+                            )}
+                          </div>
+                          <div style={{ padding: 10 }}>
+                            <div style={{ fontSize: 10, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 8 }}>
+                              {photo.name.replace(/^\d+-/, '').substring(0, 24)}
+                            </div>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button
+                                onClick={() => addBucketPhotoToActive(photo.url, photo.name)}
+                                disabled={isActive}
+                                style={{ flex: 1, padding: '6px', borderRadius: 8, border: 'none', background: isActive ? '#e5e7eb' : '#7c3aed', color: isActive ? '#9ca3af' : '#fff', fontSize: 11, fontWeight: 600, cursor: isActive ? 'default' : 'pointer', fontFamily: 'inherit' }}
+                              >{isActive ? '✓ Listede' : '⚡ Kullan'}</button>
+                              <button
+                                onClick={() => deleteBucketPhoto(photo.name)}
+                                style={{ padding: '6px 8px', borderRadius: 8, border: '1px solid #fee2e2', background: '#fff5f5', color: '#dc2626', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}
+                              >🗑️</button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeMenu === 'AVM' && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                 <div style={{ textAlign: 'center', maxWidth: 500, padding: 40 }}>
@@ -996,12 +1054,13 @@ export default function DashboardPage() {
       {/* ── BOTTOM TAB BAR ── */}
       <div style={{ height: 56, background: '#fff', borderTop: '1px solid #ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexShrink: 0, boxShadow: '0 -2px 8px rgba(0,0,0,.05)' }}>
         {[
-          { Icon: Zap,         label: 'Sanal Dene',  menu: 'CaBin' },
-          { Icon: Heart,       label: 'Kombinlerim', menu: 'Beğendiklerim' },
-          { Icon: Store,       label: 'AVM',         menu: 'AVM' },
-          { Icon: ShoppingBag, label: 'Gardırobum',  menu: 'Gardırobum' },
-          { Icon: CreditCard,  label: 'Kredilerim',  menu: 'Krediler' },
-          { Icon: Settings,    label: 'Ayarlar',     menu: 'Ayarlar' },
+          { Icon: Zap,         label: 'Sanal Dene',    menu: 'CaBin' },
+          { Icon: Heart,       label: 'Kombinlerim',  menu: 'Beğendiklerim' },
+          { Icon: Store,       label: 'AVM',          menu: 'AVM' },
+          { Icon: ShoppingBag, label: 'Gardırobum',   menu: 'Gardırobum' },
+          { Icon: Images,      label: 'Fotoğraflarım', menu: 'Fotoğraflarım' },
+          { Icon: CreditCard,  label: 'Kredilerim',   menu: 'Krediler' },
+          { Icon: Settings,    label: 'Ayarlar',      menu: 'Ayarlar' },
         ].map(({ Icon, label, menu }) => (
           <button key={menu} className="tab-btn" onClick={() => setActiveMenu(menu)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '4px 10px', borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s', color: activeMenu === menu ? '#7c3aed' : '#9ca3af' }}>
             <Icon size={18} strokeWidth={activeMenu === menu ? 2.5 : 1.8} />
