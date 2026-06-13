@@ -707,7 +707,7 @@ export default function DashboardPage() {
                         )}
                         {o.price && o.price !== '—' && (
                           <div style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed' }}>
-                            {String(o.price).replace(/[^\d.,]/g, '').split(/[.,]/)[0]} ₺
+                            {Math.round(parseFloat(String(o.price).replace(/[^\d.]/g, '')) || 0).toLocaleString('tr-TR')} ₺
                           </div>
                         )}
                       </div>

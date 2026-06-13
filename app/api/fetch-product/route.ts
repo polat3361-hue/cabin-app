@@ -31,6 +31,27 @@ function extractJsonLd($: cheerio.CheerioAPI) {
   return result;
 }
 
+function normalizePrice(raw: string | number | null | undefined): string {
+  if (raw == null || raw === '') return '—';
+  const s = String(raw).trim();
+  // Pure numeric from JSON-LD (e.g. 1699 or 1699.9)
+  if (/^\d+(\.\d+)?$/.test(s)) return s;
+  // Strip currency symbols and whitespace
+  const stripped = s.replace(/\s/g, '').replace(/₺|TL|EUR|USD|\$|€/gi, '');
+  if (!stripped) return '—';
+  // Turkish thousands format: "1.699" or "1.699,90"
+  if (/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(stripped)) {
+    return stripped.replace(/\./g, '').replace(',', '.');
+  }
+  // Comma-only decimal: "1699,90"
+  if (/^\d+,\d{1,2}$/.test(stripped)) {
+    return stripped.replace(',', '.');
+  }
+  // Fallback: keep digits and at most one dot
+  const digits = stripped.replace(/[^\d.]/g, '');
+  return digits || '—';
+}
+
 function extractPriceFromHtml($: cheerio.CheerioAPI) {
   const selectors = ['[itemprop="price"]','[property="product:price:amount"]','[class*="price"]','[class*="Price"]','[class*="prc"]','[class*="amount"]'];
   for (const selector of selectors) {
@@ -76,7 +97,7 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
-    return NextResponse.json({ success: !!image, image: image || null, name: cleanText(title), brand, price: cleanText(String(price || '')) || '—', colors });
+    return NextResponse.json({ success: !!image, image: image || null, name: cleanText(title), brand, price: normalizePrice(price), colors });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message || 'Bağlantı hatası.' }, { status: 500 });
   }
