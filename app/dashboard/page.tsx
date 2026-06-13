@@ -333,6 +333,9 @@ export default function DashboardPage() {
         .link-input-wrapper { border: 2px solid #c4b5fd !important; transition: border-color .15s, box-shadow .15s; }
         .link-input-wrapper:focus-within { border-color: #7c3aed !important; box-shadow: 0 0 0 3px rgba(124,58,237,0.15) !important; }
         .gift-card:hover { transform: scale(1.02); }
+        .action-btn:hover { background: #ede9fe !important; border-color: #c4b5fd !important; color: #6d28d9 !important; }
+        .action-btn-liked:hover { background: #fce7f3 !important; border-color: #fbcfe8 !important; }
+        .buy-btn:hover { background: #f97316 !important; }
       `}</style>
 
       {/* ── HEADER ── */}
@@ -641,7 +644,7 @@ export default function DashboardPage() {
                 {/* Sonuç action butonları */}
                 {result && (
                   <div style={{ display: 'flex', gap: 4, padding: '8px 12px', flexShrink: 0, borderTop: '1px solid #f0eef8', background: '#fff' }}>
-                    <button onClick={() => { if (selectedOutfit && !cart.find(c => c.id === selectedOutfit.id)) { setCart(prev => [...prev, selectedOutfit]); setStatus('🛒 Sepete eklendi!'); setTimeout(() => setStatus(''), 2000); }}} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 10, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <button className="action-btn" onClick={() => { if (selectedOutfit && !cart.find(c => c.id === selectedOutfit.id)) { setCart(prev => [...prev, selectedOutfit]); setStatus('🛒 Sepete eklendi!'); setTimeout(() => setStatus(''), 2000); }}} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: '1.5px solid #ddd6fe', background: '#f5f3ff', color: '#6d28d9', fontSize: 10, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
                       Sepete Ekle
                     </button>
@@ -659,15 +662,15 @@ export default function DashboardPage() {
                           setTimeout(() => setLikeToast(false), 2500);
                         }
                       }
-                    }} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: '1px solid #e5e7eb', background: liked ? '#fdf2f8' : '#fff', color: liked ? '#ec4899' : '#374151', fontSize: 10, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    }} className={liked ? 'action-btn-liked' : 'action-btn'} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: '1.5px solid #ddd6fe', background: liked ? '#fdf2f8' : '#f5f3ff', color: liked ? '#ec4899' : '#6d28d9', fontSize: 10, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill={liked ? '#ec4899' : 'none'} stroke={liked ? '#ec4899' : 'currentColor'} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                       Beğen
                     </button>
-                    <button onClick={async () => { if (!result) return; try { const res = await fetch(result); const blob = await res.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'cabin-sonuc.jpg'; a.click(); } catch { window.open(result, '_blank'); }}} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 10, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <button className="action-btn" onClick={async () => { if (!result) return; try { const res = await fetch(result); const blob = await res.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'cabin-sonuc.jpg'; a.click(); } catch { window.open(result, '_blank'); }}} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: '1.5px solid #ddd6fe', background: '#f5f3ff', color: '#6d28d9', fontSize: 10, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                       İndir
                     </button>
-                    <button onClick={() => { setResult(null); setSelectedOutfit(null); setAiComment(''); setColorSuggestion(''); setStyleTip(''); setCombinations([]); setLiked(false); }} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', color: '#fff', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <button onClick={() => { setResult(null); setSelectedOutfit(null); setAiComment(''); setColorSuggestion(''); setStyleTip(''); setCombinations([]); setLiked(false); }} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#8b5cf6,#f472b6)', color: '#fff', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.12"/></svg>
                       Yeni Dene
                     </button>
@@ -725,7 +728,7 @@ export default function DashboardPage() {
                   </div>
                   {/* Satın Al */}
                   {selectedOutfit?.link && (
-                    <a href={selectedOutfit.link} target="_blank" rel="noreferrer" style={{ display: 'block', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg,#7c3aed,#ec4899)', color: '#fff', fontSize: 12, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>🛒 Ürünü Satın Al</a>
+                    <a href={selectedOutfit.link} target="_blank" rel="noreferrer" className="buy-btn" style={{ display: 'block', padding: '10px', borderRadius: 12, background: '#fb923c', color: '#fff', fontSize: 12, fontWeight: 700, textAlign: 'center', textDecoration: 'none', transition: 'background .15s' }}>🛒 Ürünü Satın Al</a>
                   )}
                   {/* Kombin Önerileri */}
                   <div>
