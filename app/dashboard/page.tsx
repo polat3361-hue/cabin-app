@@ -1361,21 +1361,23 @@ export default function DashboardPage() {
                     <div style={{ fontSize: 13, opacity: 0.8 }}>≈ {credits} deneme hakkı kaldı</div>
                   </div>
                   <div style={{ background: '#fff', border: '1px solid #ede9fe', borderRadius: 16, padding: 20 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>Paket Seç</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 20 }}>Paket Seç</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(108px, 1fr))', gap: 10, alignItems: 'center' }}>
                       {[
-                        { credits: 20, price: '$5.99', label: 'Starter', popular: false },
-                        { credits: 50, price: '$11.99', label: 'Standard', popular: false },
-                        { credits: 120, price: '$24.99', label: 'Plus', popular: true },
-                        { credits: 300, price: '$49.99', label: 'Premium', popular: false },
+                        { credits: 20,  price: '$5.99',  label: 'Starter',  popular: false, storage: 'Galeri 3 ay saklanır' },
+                        { credits: 50,  price: '$11.99', label: 'Standard', popular: false, storage: 'Galeri 3 ay saklanır' },
+                        { credits: 120, price: '$24.99', label: 'Plus',     popular: true,  storage: 'Galeri 4 ay saklanır' },
+                        { credits: 300, price: '$49.99', label: 'Premium',  popular: false, storage: 'Galeri 1 yıl saklanır' },
+                        { credits: 700, price: '$99.99', label: 'Pro',      popular: false, storage: 'Galeri 1 yıl saklanır' },
                       ].map(pkg => (
-                        <div key={pkg.credits} style={{ background: pkg.popular ? '#f5f3ff' : '#fafafa', border: `1.5px solid ${pkg.popular ? '#7c3aed' : '#e5e7eb'}`, borderRadius: 12, padding: 14, textAlign: 'center', cursor: 'pointer', position: 'relative' }}>
-                          {pkg.popular && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: '#7c3aed', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap' }}>⭐ Popüler</div>}
-                          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>{pkg.label}</div>
-                          <div style={{ fontSize: 22, fontWeight: 800, color: '#7c3aed' }}>{pkg.credits}</div>
-                          <div style={{ fontSize: 10, color: '#9ca3af', marginBottom: 8 }}>Kredi</div>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 8 }}>{pkg.price}</div>
-                          <button style={{ width: '100%', padding: '6px', borderRadius: 8, border: 'none', background: pkg.popular ? '#7c3aed' : '#ede9fe', color: pkg.popular ? '#fff' : '#7c3aed', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Satın Al</button>
+                        <div key={pkg.credits} style={{ background: pkg.popular ? '#f5f3ff' : '#fafafa', border: `${pkg.popular ? '2px' : '1.5px'} solid ${pkg.popular ? '#7c3aed' : '#e5e7eb'}`, borderRadius: 12, padding: pkg.popular ? 16 : 14, textAlign: 'center', cursor: 'pointer', position: 'relative', zIndex: pkg.popular ? 1 : 0, boxShadow: pkg.popular ? '0 4px 20px rgba(124,58,237,0.18)' : 'none', transform: pkg.popular ? 'scale(1.04)' : 'none' }}>
+                          {pkg.popular && <div style={{ position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 9, fontWeight: 700, padding: '3px 9px', borderRadius: 10, whiteSpace: 'nowrap' }}>⭐ En Popüler</div>}
+                          <div style={{ fontSize: 11, color: pkg.popular ? '#7c3aed' : '#9ca3af', fontWeight: pkg.popular ? 700 : 400, marginBottom: 4 }}>{pkg.label}</div>
+                          <div style={{ fontSize: pkg.popular ? 28 : 22, fontWeight: 800, color: '#7c3aed', lineHeight: 1 }}>{pkg.credits}</div>
+                          <div style={{ fontSize: 10, color: '#9ca3af', marginBottom: 6 }}>Kredi</div>
+                          <div style={{ fontSize: pkg.popular ? 15 : 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 }}>{pkg.price}</div>
+                          <div style={{ fontSize: 9, color: '#9ca3af', marginBottom: 10, lineHeight: 1.4 }}>{pkg.storage}</div>
+                          <button style={{ width: '100%', padding: '7px', borderRadius: 8, border: 'none', background: pkg.popular ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#ede9fe', color: pkg.popular ? '#fff' : '#7c3aed', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Satın Al</button>
                         </div>
                       ))}
                     </div>
