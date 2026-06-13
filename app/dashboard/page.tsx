@@ -332,7 +332,8 @@ export default function DashboardPage() {
         .upload-zone:hover { border-color: #7c3aed !important; background: #f5f3ff !important; }
         .link-input-wrapper { border: 2px solid #c4b5fd !important; transition: border-color .15s, box-shadow .15s; }
         .link-input-wrapper:focus-within { border-color: #7c3aed !important; box-shadow: 0 0 0 3px rgba(124,58,237,0.15) !important; }
-        .gift-card:hover { transform: scale(1.02); }
+        .gift-btn:hover { opacity: 0.88; }
+        @media (max-width: 640px) { .gift-btn-label { display: none; } }
         .action-btn:hover { background: #ede9fe !important; border-color: #c4b5fd !important; color: #6d28d9 !important; }
         .action-btn-liked:hover { background: #fce7f3 !important; border-color: #fbcfe8 !important; }
         .buy-btn:hover { background: #f97316 !important; }
@@ -351,8 +352,9 @@ export default function DashboardPage() {
             <span style={{ fontSize: 13 }}>⚡</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>{credits} Kredi</span>
           </div>
-          <button onClick={() => setActiveMenu('Davet Et')} style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid #ede9fe', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7c3aed' }}>
-            <Gift size={17} />
+          <button onClick={() => setActiveMenu('Davet Et')} className="gift-btn" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px', borderRadius: 20, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', cursor: 'pointer', color: '#fff', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'inherit', transition: 'opacity .15s' }}>
+            <Gift size={13} />
+            <span className="gift-btn-label">30 Kredi Kazan</span>
           </button>
           <div style={{ position: 'relative', width: 36, height: 36, borderRadius: 10, border: '1px solid #ede9fe', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
             <Bell size={17} />
@@ -529,16 +531,6 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                <div style={{ height: 1, background: '#f3f4f6', marginBottom: 20 }} />
-
-                {/* Gift Card */}
-                <div onClick={() => setActiveMenu('Davet Et')} className="gift-card" style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', transition: 'transform .15s', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 24, flexShrink: 0 }}>🎁</span>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>30 krediye kadar hediye!</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Görevleri tamamla, kredini kap</div>
-                  </div>
-                </div>
               </div>
             </div>
 
