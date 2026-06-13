@@ -18,6 +18,19 @@ interface Photo {
   name: string;
 }
 
+interface TryonRecord {
+  id: number;
+  resultImg: string;
+  outfitImg: string;
+  outfitName: string;
+  brand: string;
+  price: string;
+  link?: string;
+  category: string;
+  date: string;
+  liked: boolean;
+}
+
 export default function DashboardPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
@@ -61,6 +74,12 @@ export default function DashboardPage() {
   const [hoveredOutfitId, setHoveredOutfitId] = useState<number | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [tryons, setTryons] = useState<TryonRecord[]>([]);
+  const [currentTryonId, setCurrentTryonId] = useState<number | null>(null);
+  const [wardrobeFilter, setWardrobeFilter] = useState<'Tümü' | 'Beğendiklerim'>('Tümü');
+  const [tryonSelectMode, setTryonSelectMode] = useState(false);
+  const [selectedTryonIds, setSelectedTryonIds] = useState<Set<number>>(new Set());
+  const [hoveredTryonId, setHoveredTryonId] = useState<number | null>(null);
   const [likeToast, setLikeToast] = useState(false);
   const [bucketPhotos, setBucketPhotos] = useState<{name: string, url: string}[]>([]);
   const [loadingBucketPhotos, setLoadingBucketPhotos] = useState(false);
@@ -107,6 +126,8 @@ export default function DashboardPage() {
     if (savedFavorites) setFavorites(JSON.parse(savedFavorites));
     const savedWardrobe = localStorage.getItem('cabin_wardrobe');
     if (savedWardrobe) setWardrobe(JSON.parse(savedWardrobe));
+    const savedTryons = localStorage.getItem('cabin_tryons');
+    if (savedTryons) setTryons(JSON.parse(savedTryons));
     const savedHistory = localStorage.getItem('cabin_history');
     if (savedHistory) setHistory(JSON.parse(savedHistory));
   }, []);
@@ -158,6 +179,24 @@ export default function DashboardPage() {
     const limited = w.slice(0, 50);
     setWardrobe(limited);
     safeSet('cabin_wardrobe', limited, 50);
+  }
+
+  function saveTryons(t: TryonRecord[]) {
+    const limited = t.slice(0, 250);
+    setTryons(limited);
+    safeSet('cabin_tryons', limited, 250);
+  }
+
+  function deleteTryon(id: number) {
+    saveTryons(tryons.filter(t => t.id !== id));
+  }
+
+  function deleteSelectedTryons() {
+    if (selectedTryonIds.size === 0) return;
+    if (!window.confirm(`${selectedTryonIds.size} deneme silinecek, emin misiniz?`)) return;
+    saveTryons(tryons.filter(t => !selectedTryonIds.has(t.id)));
+    setSelectedTryonIds(new Set());
+    setTryonSelectMode(false);
   }
 
   function deletePhoto(photo: Photo) {
@@ -295,6 +334,8 @@ export default function DashboardPage() {
       const data = await res.json();
       if (data.output) {
         setResult(data.output);
+        setLiked(false);
+        setCurrentTryonId(null);
         setUyumScore(Math.floor(Math.random() * 21) + 80);
         fetch('/api/ai-comment', {
           method: 'POST',
@@ -339,6 +380,42 @@ export default function DashboardPage() {
         setCredits(c => c - 1);
         setStatus('✅ Tamamlandı!');
         setTimeout(() => setStatus(''), 3000);
+        // Upload result image to Supabase for permanent storage (FASHN URLs expire in 72h)
+        if (tryons.length < 250) {
+          const capturedOutfit = selectedOutfit;
+          const capturedCategory = category;
+          ;(async () => {
+            try {
+              const resp = await fetch(data.output);
+              const blob = await resp.blob();
+              const ts = Date.now();
+              const filename = `tryons/${ts}.jpg`;
+              await supabase.storage.from('user-photos').upload(filename, blob, { contentType: 'image/jpeg', upsert: false });
+              const { data: urlData } = supabase.storage.from('user-photos').getPublicUrl(filename);
+              const record: TryonRecord = {
+                id: ts,
+                resultImg: urlData.publicUrl,
+                outfitImg: capturedOutfit.img,
+                outfitName: capturedOutfit.name,
+                brand: capturedOutfit.brand || '—',
+                price: capturedOutfit.price || '—',
+                link: capturedOutfit.link,
+                category: capturedCategory,
+                date: new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                liked: false,
+              };
+              setTryons(prev => {
+                const updated = [record, ...prev].slice(0, 250);
+                try { localStorage.setItem('cabin_tryons', JSON.stringify(updated)); } catch {}
+                return updated;
+              });
+              setCurrentTryonId(ts);
+            } catch { /* silent — result still shows even if save fails */ }
+          })();
+        } else {
+          setStatus('⚠️ Gardırop dolu (250/250). Yer açmak için Gardırobum\'dan bazılarını sil.');
+          setTimeout(() => setStatus(''), 5000);
+        }
       } else { setStatus('❌ ' + (data.error || 'Hata oluştu')); setTimeout(() => setStatus(''), 5000); }
     } catch { setStatus('❌ Bağlantı hatası'); setTimeout(() => setStatus(''), 3000); }
     finally { setLoading(false); }
@@ -675,16 +752,19 @@ export default function DashboardPage() {
                     <button onClick={() => {
                       const newLiked = !liked;
                       setLiked(newLiked);
+                      if (currentTryonId !== null) {
+                        setTryons(prev => {
+                          const updated = prev.map(t => t.id === currentTryonId ? { ...t, liked: newLiked } : t);
+                          try { localStorage.setItem('cabin_tryons', JSON.stringify(updated)); } catch {}
+                          return updated;
+                        });
+                      }
                       if (result && selectedOutfit) {
                         const fav = { ...selectedOutfit, resultImg: result };
                         const updatedFavs = [fav, ...favorites.filter((f: any) => f.id !== selectedOutfit.id)];
                         setFavorites(updatedFavs);
                         safeSet('cabin_favorites', updatedFavs, 30);
-                        if (newLiked && !wardrobe.find(w => w.id === selectedOutfit.id)) {
-                          saveWardrobe([selectedOutfit, ...wardrobe]);
-                          setLikeToast(true);
-                          setTimeout(() => setLikeToast(false), 2500);
-                        }
+                        if (newLiked) { setLikeToast(true); setTimeout(() => setLikeToast(false), 2500); }
                       }
                     }} className={liked ? 'action-btn-liked' : 'action-btn'} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: '1.5px solid #ddd6fe', background: liked ? '#fdf2f8' : '#f5f3ff', color: liked ? '#ec4899' : '#6d28d9', fontSize: 10, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill={liked ? '#ec4899' : 'none'} stroke={liked ? '#ec4899' : 'currentColor'} strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -694,7 +774,7 @@ export default function DashboardPage() {
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                       İndir
                     </button>
-                    <button onClick={() => { setResult(null); setSelectedOutfit(null); setAiComment(''); setColorSuggestion(''); setStyleTip(''); setCombinations([]); setLiked(false); }} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#8b5cf6,#f472b6)', color: '#fff', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <button onClick={() => { setResult(null); setSelectedOutfit(null); setAiComment(''); setColorSuggestion(''); setStyleTip(''); setCombinations([]); setLiked(false); setCurrentTryonId(null); }} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#8b5cf6,#f472b6)', color: '#fff', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.12"/></svg>
                       Yeni Dene
                     </button>
@@ -949,31 +1029,106 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {activeMenu === 'Gardırobum' && (
-              <div style={{ padding: 24 }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>👗 Gardırobum</div>
-                {wardrobe.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af', fontSize: 13 }}>
-                    <div style={{ fontSize: 48, marginBottom: 12 }}>👗</div>
-                    Gardırobunuz boş
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
-                    {wardrobe.map((w: Outfit) => (
-                      <div key={w.id} onClick={() => { setSelectedOutfit(w); setActiveMenu('CaBin'); }} style={{ background: '#fff', border: '1px solid #ede9fe', borderRadius: 12, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,.05)' }}>
-                        <div style={{ height: 180, overflow: 'hidden' }}>
-                          <img src={w.img} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+            {activeMenu === 'Gardırobum' && (() => {
+              const filtered = wardrobeFilter === 'Beğendiklerim' ? tryons.filter(t => t.liked) : tryons;
+              return (
+                <div style={{ padding: 24 }}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                    {tryonSelectMode ? (
+                      <>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#374151', paddingTop: 2 }}>{selectedTryonIds.size} deneme seçildi</span>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          <button onClick={() => setSelectedTryonIds(new Set(filtered.map(t => t.id)))} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Tümünü Seç</button>
+                          <button onClick={deleteSelectedTryons} disabled={selectedTryonIds.size === 0} style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: selectedTryonIds.size === 0 ? '#f3f4f6' : '#dc2626', color: selectedTryonIds.size === 0 ? '#9ca3af' : '#fff', fontSize: 12, fontWeight: 600, cursor: selectedTryonIds.size === 0 ? 'default' : 'pointer', fontFamily: 'inherit' }}>Seçilenleri Sil</button>
+                          <button onClick={() => { setTryonSelectMode(false); setSelectedTryonIds(new Set()); }} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>İptal</button>
                         </div>
-                        <div style={{ padding: 10 }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.name}</div>
-                          <button onClick={e => { e.stopPropagation(); setSelectedOutfit(w); setActiveMenu('CaBin'); }} style={{ marginTop: 6, width: '100%', padding: '5px', borderRadius: 7, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>⚡ Dene</button>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 8 }}>👗 Gardırobum</div>
+                          <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{tryons.length} / 250 deneme</div>
                         </div>
-                      </div>
-                    ))}
+                        {tryons.length > 0 && (
+                          <button onClick={() => setTryonSelectMode(true)} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <Trash2 size={14} />Seç
+                          </button>
+                        )}
+                      </>
+                    )}
                   </div>
-                )}
-              </div>
-            )}
+
+                  {/* Filter tabs */}
+                  {!tryonSelectMode && (
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                      {(['Tümü', 'Beğendiklerim'] as const).map(f => (
+                        <button key={f} onClick={() => setWardrobeFilter(f)} style={{ padding: '5px 14px', borderRadius: 20, border: `1.5px solid ${wardrobeFilter === f ? '#7c3aed' : '#e5e7eb'}`, background: wardrobeFilter === f ? '#f5f3ff' : '#fff', color: wardrobeFilter === f ? '#7c3aed' : '#6b7280', fontSize: 12, fontWeight: wardrobeFilter === f ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {f === 'Beğendiklerim' ? `❤️ Beğendiklerim (${tryons.filter(t => t.liked).length})` : `Tümü (${tryons.length})`}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {tryons.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af', fontSize: 13 }}>
+                      <div style={{ fontSize: 48, marginBottom: 12 }}>👗</div>
+                      Henüz deneme yapılmadı. Dene butonuna basınca sonuç buraya kaydedilir.
+                    </div>
+                  ) : filtered.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af', fontSize: 13 }}>
+                      <div style={{ fontSize: 40, marginBottom: 12 }}>❤️</div>
+                      Henüz beğendiğin deneme yok.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+                      {filtered.map((t: TryonRecord) => {
+                        const isSel = selectedTryonIds.has(t.id);
+                        return (
+                          <div key={t.id}
+                            onMouseEnter={() => setHoveredTryonId(t.id)}
+                            onMouseLeave={() => setHoveredTryonId(null)}
+                            onClick={() => {
+                              if (tryonSelectMode) {
+                                setSelectedTryonIds(prev => { const next = new Set(prev); next.has(t.id) ? next.delete(t.id) : next.add(t.id); return next; });
+                              }
+                            }}
+                            style={{ background: '#fff', border: `2px solid ${isSel ? '#7c3aed' : '#ede9fe'}`, borderRadius: 12, overflow: 'hidden', boxShadow: isSel ? '0 0 0 3px rgba(124,58,237,0.15)' : '0 2px 8px rgba(0,0,0,.05)', cursor: tryonSelectMode ? 'pointer' : 'default' }}>
+                            <div style={{ aspectRatio: '3/4', overflow: 'hidden', position: 'relative' }}>
+                              <img src={t.resultImg} alt={t.outfitName} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+                              {t.liked && !tryonSelectMode && (
+                                <div style={{ position: 'absolute', top: 8, right: 8, fontSize: 16 }}>❤️</div>
+                              )}
+                              {!tryonSelectMode && hoveredTryonId === t.id && (
+                                <button onClick={e => { e.stopPropagation(); deleteTryon(t.id); }} style={{ position: 'absolute', top: 6, left: 6, width: 22, height: 22, borderRadius: '50%', background: '#dc2626', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>×</button>
+                              )}
+                              {tryonSelectMode && (
+                                <div style={{ position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: '50%', background: isSel ? '#7c3aed' : 'rgba(0,0,0,0.25)', border: isSel ? 'none' : '2px solid rgba(255,255,255,0.7)', color: '#fff', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{isSel ? '✓' : ''}</div>
+                              )}
+                            </div>
+                            <div style={{ padding: 10 }}>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>{t.outfitName}</div>
+                              {t.brand && t.brand !== '—' && (
+                                <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 2 }}>{t.brand}</div>
+                              )}
+                              {t.price && t.price !== '—' && !isNaN(parseFloat(t.price)) && (
+                                <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', marginBottom: 4 }}>
+                                  {parseFloat(t.price).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ₺
+                                </div>
+                              )}
+                              <div style={{ fontSize: 9, color: '#d1d5db', marginBottom: 6 }}>{t.date}</div>
+                              {!tryonSelectMode && t.link && (
+                                <a href={t.link} target="_blank" rel="noopener noreferrer" style={{ display: 'block', padding: '5px', borderRadius: 7, background: 'linear-gradient(135deg,#fb923c,#f97316)', color: '#fff', fontSize: 10, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>Satın Al</a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {activeMenu === 'Fotoğraflarım' && (
               <div style={{ padding: 24 }}>
