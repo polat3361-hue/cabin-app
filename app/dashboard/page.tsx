@@ -50,6 +50,7 @@ export default function DashboardPage() {
   const [category, setCategory] = useState('Üst');
   const [result, setResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [kombinProgress, setKombinProgress] = useState('');
   const [credits, setCredits] = useState(114);
   const [link, setLink] = useState('');
   const [status, setStatus] = useState('');
@@ -341,91 +342,142 @@ export default function DashboardPage() {
     } catch { setStatus('❌ Bağlantı hatası'); setTimeout(() => setStatus(''), 3000); }
   }
 
+  function normalizeCategory(cat: string): string {
+    return cat.replace(/ü/g,'u').replace(/Ü/g,'U').replace(/ş/g,'s').replace(/Ş/g,'S')
+              .replace(/ı/g,'i').replace(/İ/g,'I').replace(/ğ/g,'g').replace(/Ğ/g,'G')
+              .replace(/ç/g,'c').replace(/Ç/g,'C').replace(/ö/g,'o').replace(/Ö/g,'O');
+  }
+
   function kombinPartCost(cat: string): number {
-    const n = cat.replace(/ü/g,'u').replace(/Ü/g,'U').replace(/ş/g,'s').replace(/Ş/g,'S')
-                 .replace(/ı/g,'i').replace(/İ/g,'I').replace(/ğ/g,'g').replace(/Ğ/g,'G')
-                 .replace(/ç/g,'c').replace(/Ç/g,'C').replace(/ö/g,'o').replace(/Ö/g,'O');
-    return ['Ayakkabi','Canta','Gozluk','Aksesuar','Taki','Sapka'].includes(n) ? 2 : 1;
+    return ['Ayakkabi','Canta','Gozluk','Aksesuar','Taki','Sapka'].includes(normalizeCategory(cat)) ? 2 : 1;
   }
 
   async function doTry() {
-    if (!selectedPhoto || !selectedOutfit || credits <= 0) return;
-    const capturedCost = isKombin && kombinItems.length > 0
+    const doSequential = isKombin && kombinItems.length > 0;
+    if (!selectedPhoto || credits <= 0) return;
+    if (!doSequential && !selectedOutfit) return;
+
+    const accessoryCatNorm = ['Ayakkabi','Canta','Gozluk','Aksesuar','Taki','Sapka'];
+    const capturedCost = doSequential
       ? kombinItems.reduce((sum, ki) => sum + kombinPartCost(ki.category), 0)
       : 1;
+
     setLoading(true);
     setResult(null);
     setCombinations([]);
     setUyumScore(0);
     setColorSuggestion('');
     setStyleTip('');
-    setStatus('⏳ AI çalışıyor...');
+    setKombinProgress('');
+    setStatus(doSequential ? '⏳ Kombin başlatılıyor...' : '⏳ AI çalışıyor...');
+
     try {
-      const res = await fetch('/api/tryon', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ modelImage: selectedPhoto.url, garmentImage: selectedOutfit.img, category }),
-      });
-      const data = await res.json();
-      if (data.output) {
-        setResult(data.output);
+      let finalOutput: string | null = null;
+      let earnedCost = 0;
+
+      if (doSequential) {
+        // Clothes first, accessories last — so accessories layer on top
+        const sorted = [...kombinItems].sort((a, b) =>
+          Number(accessoryCatNorm.includes(normalizeCategory(a.category))) -
+          Number(accessoryCatNorm.includes(normalizeCategory(b.category)))
+        );
+        let currentModelImg = selectedPhoto.url;
+        for (let i = 0; i < sorted.length; i++) {
+          const ki = sorted[i];
+          const outfit = outfits.find(o => o.id === ki.outfitId);
+          if (!outfit) continue;
+          setKombinProgress(`(${i + 1}/${sorted.length} parça)`);
+          const res = await fetch('/api/tryon', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ modelImage: currentModelImg, garmentImage: outfit.img, category: ki.category }),
+          });
+          const data = await res.json();
+          if (data.output) {
+            currentModelImg = data.output;
+            finalOutput = data.output;
+            earnedCost += kombinPartCost(ki.category);
+          }
+        }
+      } else {
+        const res = await fetch('/api/tryon', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ modelImage: selectedPhoto.url, garmentImage: selectedOutfit!.img, category }),
+        });
+        const data = await res.json();
+        if (data.output) {
+          finalOutput = data.output;
+          earnedCost = capturedCost;
+        } else {
+          setStatus('❌ ' + (data.error || 'Hata oluştu'));
+          setTimeout(() => setStatus(''), 5000);
+        }
+      }
+
+      if (finalOutput) {
+        setResult(finalOutput);
         setLiked(false);
         setCurrentTryonId(null);
         setUyumScore(Math.floor(Math.random() * 21) + 80);
-        fetch('/api/ai-comment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ outfitName: selectedOutfit.name, category, brand: selectedOutfit.brand }),
-        }).then(r => r.json()).then(d => {
-          if (d.comment) setAiComment(d.comment);
-          if (d.combinations) setCombinations(d.combinations);
-          if (d.colorSuggestion) setColorSuggestion(d.colorSuggestion);
-          if (d.styleTip) setStyleTip(d.styleTip);
-          if (d.combinations) {
-            d.combinations.forEach(async (c: any, i: number) => {
-              const searchTerms = [
-                `https://www.trendyol.com/sr?q=${encodeURIComponent(c.search)}&st=${encodeURIComponent(c.search)}`,
-                `https://www.hepsiburada.com/ara?q=${encodeURIComponent(c.search)}`,
-                `https://www.lcw.com/arama?q=${encodeURIComponent(c.search)}`,
-              ];
-              const storeNames = ['Trendyol', 'Hepsiburada', 'LCW'];
-              const storeColors = ['#f27a1a', '#ff6000', '#e30613'];
-              setCombinations((prev: any[]) => prev.map((item: any, idx: number) =>
-                idx === i ? {
-                  ...item,
-                  storeUrl: searchTerms[i % searchTerms.length],
-                  storeName: storeNames[i % storeNames.length],
-                  storeColor: storeColors[i % storeColors.length],
-                } : item
-              ));
-            });
-          }
-        });
+        setKombinProgress('');
+        if (!doSequential) {
+          fetch('/api/ai-comment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ outfitName: selectedOutfit!.name, category, brand: selectedOutfit!.brand }),
+          }).then(r => r.json()).then(d => {
+            if (d.comment) setAiComment(d.comment);
+            if (d.combinations) setCombinations(d.combinations);
+            if (d.colorSuggestion) setColorSuggestion(d.colorSuggestion);
+            if (d.styleTip) setStyleTip(d.styleTip);
+            if (d.combinations) {
+              d.combinations.forEach(async (c: any, i: number) => {
+                const searchTerms = [
+                  `https://www.trendyol.com/sr?q=${encodeURIComponent(c.search)}&st=${encodeURIComponent(c.search)}`,
+                  `https://www.hepsiburada.com/ara?q=${encodeURIComponent(c.search)}`,
+                  `https://www.lcw.com/arama?q=${encodeURIComponent(c.search)}`,
+                ];
+                const storeNames = ['Trendyol', 'Hepsiburada', 'LCW'];
+                const storeColors = ['#f27a1a', '#ff6000', '#e30613'];
+                setCombinations((prev: any[]) => prev.map((item: any, idx: number) =>
+                  idx === i ? {
+                    ...item,
+                    storeUrl: searchTerms[i % searchTerms.length],
+                    storeName: storeNames[i % storeNames.length],
+                    storeColor: storeColors[i % storeColors.length],
+                  } : item
+                ));
+              });
+            }
+          });
+        }
         const historyItem = {
           id: Date.now(),
           date: new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
           photo: selectedPhoto.url,
-          outfit: selectedOutfit.img,
-          result: data.output,
-          outfitName: selectedOutfit.name,
+          outfit: doSequential ? (outfits.find(o => o.id === kombinItems[0]?.outfitId)?.img ?? '') : selectedOutfit!.img,
+          result: finalOutput,
+          outfitName: doSequential ? `Kombin (${kombinItems.length} parça)` : selectedOutfit!.name,
         };
         const updatedHistory = [historyItem, ...history].slice(0, 50);
         setHistory(updatedHistory);
         safeSet('cabin_history', updatedHistory, 30);
-        setCredits(c => c - capturedCost);
+        setCredits(c => c - earnedCost);
         setStatus('✅ Tamamlandı!');
         setTimeout(() => setStatus(''), 3000);
         // Upload result image to Supabase for permanent storage (FASHN URLs expire in 72h)
         if (tryons.length < 250) {
-          const capturedOutfit = selectedOutfit;
+          const capturedOutfit = selectedOutfit ?? (outfits.find(x => x.id === kombinItems[0]?.outfitId) ?? null);
           const capturedCategory = category;
           const capturedIsKombin = isKombin;
           const capturedKombinParts: KombinPart[] = kombinItems
             .map(ki => { const o = outfits.find(x => x.id === ki.outfitId); return o ? { outfitName: o.name, brand: o.brand || '—', price: o.price || '—', link: o.link, img: o.img, category: ki.category } : null; })
             .filter(Boolean) as KombinPart[];
+          const capturedFinalOutput = finalOutput;
           ;(async () => {
             try {
-              const resp = await fetch(data.output);
+              const resp = await fetch(capturedFinalOutput);
               const blob = await resp.blob();
               const ts = Date.now();
               const filename = `tryons/${ts}.jpg`;
@@ -434,11 +486,11 @@ export default function DashboardPage() {
               const record: TryonRecord = {
                 id: ts,
                 resultImg: urlData.publicUrl,
-                outfitImg: capturedOutfit.img,
-                outfitName: capturedIsKombin && capturedKombinParts.length > 0 ? `Kombin (${capturedKombinParts.length} parça)` : capturedOutfit.name,
-                brand: capturedOutfit.brand || '—',
-                price: capturedOutfit.price || '—',
-                link: capturedOutfit.link,
+                outfitImg: capturedOutfit?.img ?? '',
+                outfitName: capturedIsKombin && capturedKombinParts.length > 0 ? `Kombin (${capturedKombinParts.length} parça)` : (capturedOutfit?.name ?? 'Kombin'),
+                brand: capturedOutfit?.brand ?? '—',
+                price: capturedOutfit?.price ?? '—',
+                link: capturedOutfit?.link,
                 category: capturedCategory,
                 date: new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
                 liked: false,
@@ -457,8 +509,18 @@ export default function DashboardPage() {
           setStatus('⚠️ Gardırop dolu (250/250). Yer açmak için Gardırobum\'dan bazılarını sil.');
           setTimeout(() => setStatus(''), 5000);
         }
-      } else { setStatus('❌ ' + (data.error || 'Hata oluştu')); setTimeout(() => setStatus(''), 5000); }
-    } catch { setStatus('❌ Bağlantı hatası'); setTimeout(() => setStatus(''), 3000); }
+      } else {
+        setKombinProgress('');
+        if (doSequential) {
+          setStatus('❌ Kombin oluşturulamadı');
+          setTimeout(() => setStatus(''), 5000);
+        }
+      }
+    } catch {
+      setKombinProgress('');
+      setStatus('❌ Bağlantı hatası');
+      setTimeout(() => setStatus(''), 3000);
+    }
     finally { setLoading(false); }
   }
 
@@ -659,10 +721,15 @@ export default function DashboardPage() {
                             <select value={ki.category} onChange={e => setKombinItems(prev => prev.map((item, idx) => idx === i ? {...item, category: e.target.value} : item))} style={{ fontSize: 10, borderRadius: 6, border: '1px solid #e5e7eb', padding: '2px 4px', fontFamily: 'inherit' }}>
                               <option>Üst</option>
                               <option>Alt</option>
-                              <option>Ayakkabı</option>
-                              <option>Takı</option>
+                              <option>Elbise</option>
+                              <option>Ceket</option>
                               <option>Dış Giyim</option>
+                              <option>Ayakkabı</option>
+                              <option>Çanta</option>
                               <option>Gözlük</option>
+                              <option>Şapka</option>
+                              <option>Takı</option>
+                              <option>Aksesuar</option>
                             </select>
                             <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 4, background: kombinPartCost(ki.category) === 2 ? '#fdf2f8' : '#f5f3ff', color: kombinPartCost(ki.category) === 2 ? '#ec4899' : '#7c3aed', whiteSpace: 'nowrap' }}>
                               {kombinPartCost(ki.category)} ⚡
@@ -725,7 +792,7 @@ export default function DashboardPage() {
 
                   {/* Ortada Dene butonu */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', flexShrink: 0 }}>
-                    <button onClick={doTry} disabled={loading || !selectedPhoto || !selectedOutfit} className="try-btn" style={{ width: 48, height: 48, border: 'none', background: 'none', cursor: (loading || !selectedPhoto || !selectedOutfit) ? 'not-allowed' : 'pointer', flexShrink: 0, padding: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
+                    <button onClick={doTry} disabled={loading || !selectedPhoto || (isKombin ? kombinItems.length === 0 : !selectedOutfit)} className="try-btn" style={{ width: 48, height: 48, border: 'none', background: 'none', cursor: (loading || !selectedPhoto || !selectedOutfit) ? 'not-allowed' : 'pointer', flexShrink: 0, padding: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
                       <RotateCw size={68} strokeWidth={1.5} className="rotate-icon" style={{ color: (loading || !selectedPhoto || !selectedOutfit) ? '#d1d5db' : '#fb923c' }} />
                       <div style={{ width: 40, height: 40, borderRadius: '50%', background: (loading || !selectedPhoto || !selectedOutfit) ? '#e5e7eb' : 'linear-gradient(135deg,#8b5cf6,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1, boxShadow: (loading || !selectedPhoto || !selectedOutfit) ? 'none' : '0 4px 14px rgba(124,58,237,.4)', flexShrink: 0 }}>
                         {loading
@@ -755,8 +822,8 @@ export default function DashboardPage() {
                             <span style={{ fontFamily: 'Georgia, serif', fontSize: 18, fontWeight: 800, background: 'linear-gradient(135deg,#7c3aed,#ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>CaBin</span>
                           </div>
                         </div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#7c3aed' }}>Giydiriliyor...</div>
-                        <div style={{ fontSize: 11, color: '#9ca3af' }}>20-40 saniye sürebilir</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#7c3aed' }}>{kombinProgress ? `Kombin hazırlanıyor... ${kombinProgress}` : 'Giydiriliyor...'}</div>
+                        <div style={{ fontSize: 11, color: '#9ca3af' }}>{isKombin && kombinItems.length > 1 ? `${kombinItems.length} parça × ~30sn` : '20-40 saniye sürebilir'}</div>
                       </div>
                     ) : result ? (
                       <>
