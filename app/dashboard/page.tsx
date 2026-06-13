@@ -1352,17 +1352,25 @@ export default function DashboardPage() {
             )}
 
             {activeMenu === 'Krediler' && (
-              <div style={{ padding: 24 }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#1a1a2e', marginBottom: 24 }}>💳 Krediler</div>
-                <div style={{ maxWidth: 680, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div style={{ background: 'linear-gradient(135deg,#7c3aed,#ec4899)', borderRadius: 20, padding: 24, color: '#fff' }}>
-                    <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 6 }}>Mevcut Krediniz</div>
-                    <div style={{ fontSize: 48, fontWeight: 800, marginBottom: 4 }}>⚡ {credits}</div>
-                    <div style={{ fontSize: 13, opacity: 0.8 }}>≈ {credits} deneme hakkı kaldı</div>
+              <div style={{ padding: '36px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ width: '100%', maxWidth: 980, display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  {/* Başlık */}
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 8 }}>💳 Krediler</div>
+
+                  {/* Mevcut kredi kartı */}
+                  <div style={{ background: 'linear-gradient(135deg,#7c3aed 0%,#a855f7 50%,#ec4899 100%)', borderRadius: 20, padding: '28px 32px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 32px rgba(124,58,237,0.25)' }}>
+                    <div>
+                      <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 6, fontWeight: 500 }}>Mevcut Krediniz</div>
+                      <div style={{ fontSize: 56, fontWeight: 800, lineHeight: 1, marginBottom: 6 }}>⚡ {credits}</div>
+                      <div style={{ fontSize: 13, opacity: 0.7 }}>≈ {credits} deneme hakkı kaldı</div>
+                    </div>
+                    <div style={{ fontSize: 72, opacity: 0.12, userSelect: 'none' }}>💳</div>
                   </div>
-                  <div style={{ background: '#fff', border: '1px solid #ede9fe', borderRadius: 16, padding: 20 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 20 }}>Paket Seç</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(108px, 1fr))', gap: 10, alignItems: 'center' }}>
+
+                  {/* Paket seç */}
+                  <div style={{ background: '#fff', border: '1px solid #ede9fe', borderRadius: 20, padding: '28px 32px', boxShadow: '0 2px 16px rgba(0,0,0,.05)' }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 28 }}>Paket Seç</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(148px, 1fr))', gap: 16, alignItems: 'end' }}>
                       {[
                         { credits: 20,  price: '$5.99',  label: 'Starter',  popular: false, storage: 'Galeri 3 ay saklanır' },
                         { credits: 50,  price: '$11.99', label: 'Standard', popular: false, storage: 'Galeri 3 ay saklanır' },
@@ -1370,14 +1378,28 @@ export default function DashboardPage() {
                         { credits: 300, price: '$49.99', label: 'Premium',  popular: false, storage: 'Galeri 1 yıl saklanır' },
                         { credits: 700, price: '$99.99', label: 'Pro',      popular: false, storage: 'Galeri 1 yıl saklanır' },
                       ].map(pkg => (
-                        <div key={pkg.credits} style={{ background: pkg.popular ? '#f5f3ff' : '#fafafa', border: `${pkg.popular ? '2px' : '1.5px'} solid ${pkg.popular ? '#7c3aed' : '#e5e7eb'}`, borderRadius: 12, padding: pkg.popular ? 16 : 14, textAlign: 'center', cursor: 'pointer', position: 'relative', zIndex: pkg.popular ? 1 : 0, boxShadow: pkg.popular ? '0 4px 20px rgba(124,58,237,0.18)' : 'none', transform: pkg.popular ? 'scale(1.04)' : 'none' }}>
-                          {pkg.popular && <div style={{ position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 9, fontWeight: 700, padding: '3px 9px', borderRadius: 10, whiteSpace: 'nowrap' }}>⭐ En Popüler</div>}
-                          <div style={{ fontSize: 11, color: pkg.popular ? '#7c3aed' : '#9ca3af', fontWeight: pkg.popular ? 700 : 400, marginBottom: 4 }}>{pkg.label}</div>
-                          <div style={{ fontSize: pkg.popular ? 28 : 22, fontWeight: 800, color: '#7c3aed', lineHeight: 1 }}>{pkg.credits}</div>
-                          <div style={{ fontSize: 10, color: '#9ca3af', marginBottom: 6 }}>Kredi</div>
-                          <div style={{ fontSize: pkg.popular ? 15 : 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 }}>{pkg.price}</div>
-                          <div style={{ fontSize: 9, color: '#9ca3af', marginBottom: 10, lineHeight: 1.4 }}>{pkg.storage}</div>
-                          <button style={{ width: '100%', padding: '7px', borderRadius: 8, border: 'none', background: pkg.popular ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#ede9fe', color: pkg.popular ? '#fff' : '#7c3aed', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Satın Al</button>
+                        <div key={pkg.credits} style={{
+                          background: pkg.popular ? '#f5f3ff' : '#fff',
+                          border: `${pkg.popular ? '2px' : '1px'} solid ${pkg.popular ? '#7c3aed' : '#e5e7eb'}`,
+                          borderRadius: 16,
+                          padding: pkg.popular ? '28px 18px 22px' : '22px 18px',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          zIndex: pkg.popular ? 1 : 0,
+                          boxShadow: pkg.popular ? '0 12px 40px rgba(124,58,237,0.22)' : '0 2px 8px rgba(0,0,0,.04)',
+                          transform: pkg.popular ? 'translateY(-8px)' : 'none',
+                          transition: 'box-shadow .2s',
+                        }}>
+                          {pkg.popular && (
+                            <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '4px 12px', borderRadius: 20, whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(124,58,237,0.35)' }}>⭐ En Popüler</div>
+                          )}
+                          <div style={{ fontSize: 11, color: pkg.popular ? '#7c3aed' : '#9ca3af', fontWeight: 700, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.6px' }}>{pkg.label}</div>
+                          <div style={{ fontSize: pkg.popular ? 40 : 30, fontWeight: 800, color: '#7c3aed', lineHeight: 1, marginBottom: 2 }}>{pkg.credits}</div>
+                          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 12 }}>Kredi</div>
+                          <div style={{ fontSize: pkg.popular ? 20 : 17, fontWeight: 800, color: '#1a1a2e', marginBottom: 6 }}>{pkg.price}</div>
+                          <div style={{ fontSize: 10, color: '#b0b8c9', marginBottom: 16, lineHeight: 1.5 }}>{pkg.storage}</div>
+                          <button style={{ width: '100%', padding: '10px', borderRadius: 10, border: 'none', background: pkg.popular ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f3f0ff', color: pkg.popular ? '#fff' : '#7c3aed', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: pkg.popular ? '0 4px 14px rgba(124,58,237,0.32)' : 'none' }}>Satın Al</button>
                         </div>
                       ))}
                     </div>
