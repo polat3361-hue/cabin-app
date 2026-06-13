@@ -589,7 +589,7 @@ export default function DashboardPage() {
                   {/* Ortada Dene butonu */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', flexShrink: 0 }}>
                     <button onClick={doTry} disabled={loading || !selectedPhoto || !selectedOutfit} className="try-btn" style={{ width: 48, height: 48, border: 'none', background: 'none', cursor: (loading || !selectedPhoto || !selectedOutfit) ? 'not-allowed' : 'pointer', flexShrink: 0, padding: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
-                      <RotateCw size={58} className="rotate-icon" style={{ color: (loading || !selectedPhoto || !selectedOutfit) ? '#d1d5db' : '#fb923c' }} />
+                      <RotateCw size={68} strokeWidth={1.5} className="rotate-icon" style={{ color: (loading || !selectedPhoto || !selectedOutfit) ? '#d1d5db' : '#fb923c' }} />
                       <div style={{ width: 40, height: 40, borderRadius: '50%', background: (loading || !selectedPhoto || !selectedOutfit) ? '#e5e7eb' : 'linear-gradient(135deg,#8b5cf6,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1, boxShadow: (loading || !selectedPhoto || !selectedOutfit) ? 'none' : '0 4px 14px rgba(124,58,237,.4)', flexShrink: 0 }}>
                         {loading
                           ? <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(255,255,255,.3)', borderTop: '2px solid #fff', animation: 'spin 1s linear infinite' }} />
