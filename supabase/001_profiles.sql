@@ -6,7 +6,7 @@
 -- 1. Tablo
 CREATE TABLE IF NOT EXISTS public.profiles (
   id         UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  credits    INTEGER     NOT NULL DEFAULT 5,
+  credits    INTEGER     NOT NULL DEFAULT 2,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -22,7 +22,7 @@ CREATE POLICY "Kullanici kendi profilini okuyabilir"
 -- UPDATE/DELETE politikası YOK → istemci tarafından değiştirilemiyor.
 -- Kredi güncellemesi yalnızca service_role (sunucu) ile yapılacak.
 
--- 4. Trigger fonksiyonu: yeni kayıt → otomatik 5 başlangıç kredisi
+-- 4. Trigger fonksiyonu: yeni kayıt → otomatik 2 başlangıç kredisi
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -30,7 +30,7 @@ SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
   INSERT INTO public.profiles (id, credits)
-  VALUES (NEW.id, 5)
+  VALUES (NEW.id, 2)
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
@@ -45,6 +45,6 @@ CREATE TRIGGER on_auth_user_created
 -- 6. Mevcut kullanıcılar için geriye dönük profil satırı
 --    (trigger yeni kayıtlara bakar, bu satır var olan kullanıcıları kapsar)
 INSERT INTO public.profiles (id, credits)
-SELECT id, 5
+SELECT id, 2
 FROM auth.users
 ON CONFLICT (id) DO NOTHING;
