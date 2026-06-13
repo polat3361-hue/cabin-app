@@ -110,9 +110,8 @@ export default function DashboardPage() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (data?.user) {
         const meta = data.user.user_metadata;
-        setUserName(meta?.full_name || data.user.email?.split('@')[0] || 'Kullanıcı');
+        setUserName(meta?.full_name || meta?.name || data.user.email?.split('@')[0] || 'Kullanıcı');
         setUserEmail(data.user.email || '');
-        // Gerçek krediyi Supabase profiles tablosundan oku
         const { data: profile } = await supabase
           .from('profiles')
           .select('credits')
@@ -121,24 +120,6 @@ export default function DashboardPage() {
         if (profile?.credits != null) setCredits(profile.credits);
         setCreditsLoaded(true);
       } else { window.location.href = '/login'; }
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      console.log('Session:', data.session?.user);
-      if (data.session?.user) {
-        const meta = data.session.user.user_metadata;
-        setUserName(meta?.full_name || meta?.name || data.session.user.email?.split('@')[0] || 'Kullanıcı');
-        setUserEmail(data.session.user.email || '');
-      } else { window.location.href = '/login'; }
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) {
-        const createdAt = new Date(data.session.user.created_at);
-        const now = new Date();
-        const diffDays = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-        const totalDays = credits >= 300 ? 365 : credits >= 120 ? 120 : 90;
-        const remainingDays = totalDays - diffDays;
-        void remainingDays;
-      }
     });
     const saved = localStorage.getItem('cabin_photos_v2');
     if (saved) setPhotos(JSON.parse(saved));
