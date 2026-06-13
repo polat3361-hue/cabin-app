@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Zap, Clock, Heart, ShoppingBag, Store, CreditCard, User, Settings, Gift, Bell, Shirt, Scissors, Sparkles, Wind, Footprints, Glasses, HardHat, Gem, Images } from 'lucide-react';
+import { Zap, Clock, Heart, ShoppingBag, Store, CreditCard, User, Settings, Gift, Bell, Shirt, Scissors, Sparkles, Wind, Footprints, Glasses, HardHat, Gem, Images, RotateCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface Outfit {
@@ -336,6 +336,8 @@ export default function DashboardPage() {
         .action-btn:hover { background: #ede9fe !important; border-color: #c4b5fd !important; color: #6d28d9 !important; }
         .action-btn-liked:hover { background: #fce7f3 !important; border-color: #fbcfe8 !important; }
         .buy-btn:hover { background: #f97316 !important; }
+        .rotate-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); transition: transform .5s ease; pointer-events: none; }
+        .try-btn:not(:disabled):hover .rotate-icon { transform: translate(-50%, -50%) rotate(360deg); }
       `}</style>
 
       {/* ── HEADER ── */}
@@ -586,8 +588,14 @@ export default function DashboardPage() {
 
                   {/* Ortada Dene butonu */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', flexShrink: 0 }}>
-                    <button onClick={doTry} disabled={loading || !selectedPhoto || !selectedOutfit} style={{ width: 48, height: 48, borderRadius: '50%', border: 'none', background: (!loading && selectedPhoto && selectedOutfit) ? 'linear-gradient(135deg,#7c3aed,#ec4899)' : '#e5e7eb', color: '#fff', fontSize: 20, cursor: (!loading && selectedPhoto && selectedOutfit) ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: (!loading && selectedPhoto && selectedOutfit) ? '0 4px 14px rgba(124,58,237,.4)' : 'none', flexShrink: 0 }}>
-                      {loading ? <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid rgba(255,255,255,.3)', borderTop: '2px solid #fff', animation: 'spin 1s linear infinite' }} /> : '⚡'}
+                    <button onClick={doTry} disabled={loading || !selectedPhoto || !selectedOutfit} className="try-btn" style={{ width: 48, height: 48, border: 'none', background: 'none', cursor: (loading || !selectedPhoto || !selectedOutfit) ? 'not-allowed' : 'pointer', flexShrink: 0, padding: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
+                      <RotateCw size={58} className="rotate-icon" style={{ color: (loading || !selectedPhoto || !selectedOutfit) ? '#d1d5db' : '#fb923c' }} />
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: (loading || !selectedPhoto || !selectedOutfit) ? '#e5e7eb' : 'linear-gradient(135deg,#8b5cf6,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1, boxShadow: (loading || !selectedPhoto || !selectedOutfit) ? 'none' : '0 4px 14px rgba(124,58,237,.4)', flexShrink: 0 }}>
+                        {loading
+                          ? <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(255,255,255,.3)', borderTop: '2px solid #fff', animation: 'spin 1s linear infinite' }} />
+                          : <span style={{ color: '#fff', fontSize: 20, fontWeight: 800, fontFamily: 'Georgia, serif', lineHeight: 1 }}>C</span>
+                        }
+                      </div>
                     </button>
                   </div>
 
