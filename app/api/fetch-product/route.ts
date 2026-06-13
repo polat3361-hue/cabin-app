@@ -19,10 +19,22 @@ function extractJsonLd($: cheerio.CheerioAPI) {
       for (const item of list) {
         const graph = item['@graph'] || [];
         const candidates = [item, ...graph];
-        const product = candidates.find((x: any) => { const type = x?.['@type']; return type === 'Product' || (Array.isArray(type) && type.includes('Product')); });
+        // Accept Product AND ProductGroup (Trendyol uses ProductGroup)
+        const isProductType = (t: unknown) => t === 'Product' || t === 'ProductGroup';
+        const product = candidates.find((x: any) => {
+          const t = x?.['@type'];
+          return typeof t === 'string' ? isProductType(t) : Array.isArray(t) && t.some(isProductType);
+        });
         if (!product) continue;
         result.title = result.title || product.name;
-        result.image = result.image || (Array.isArray(product.image) ? product.image[0] : product.image);
+        // Handle ImageObject format: { contentUrl: ["url", ...] } used by Trendyol
+        if (!result.image) {
+          const img = product.image;
+          if (typeof img === 'string') result.image = img;
+          else if (Array.isArray(img)) result.image = typeof img[0] === 'string' ? img[0] : (img[0]?.contentUrl?.[0] ?? img[0]?.url ?? null);
+          else if (img?.contentUrl) result.image = Array.isArray(img.contentUrl) ? img.contentUrl[0] : img.contentUrl;
+          else if (img?.url) result.image = img.url;
+        }
         const offer = Array.isArray(product.offers) ? product.offers[0] : product.offers;
         if (offer) { result.price = result.price || offer.price || offer.lowPrice; result.currency = result.currency || offer.priceCurrency; }
       }
@@ -52,12 +64,26 @@ function normalizePrice(raw: string | number | null | undefined): string {
   return digits || '—';
 }
 
-function extractPriceFromHtml($: cheerio.CheerioAPI) {
-  const selectors = ['[itemprop="price"]','[property="product:price:amount"]','[class*="price"]','[class*="Price"]','[class*="prc"]','[class*="amount"]'];
-  for (const selector of selectors) {
-    const attr = $(selector).first().attr('content') || $(selector).first().attr('value');
-    const text = cleanText(attr || $(selector).first().text());
-    if (text && /₺|TL|TRY|\$|€|\d/.test(text)) return text;
+function extractPriceFromHtml($: cheerio.CheerioAPI): string {
+  // 1. Attribute-based: reliable, always just the value
+  const attrSelectors = ['[itemprop="price"]', '[property="product:price:amount"]'];
+  for (const sel of attrSelectors) {
+    const val = $(sel).first().attr('content') ?? $(sel).first().attr('value') ?? '';
+    if (/^\d[\d.,]*$/.test(val.trim())) return val.trim();
+  }
+  // 2. Text-based: only accept short strings that look like a single price
+  //    Avoid broad containers ([class*="price"]) that include old price + extra text
+  const PRICE_RE = /^\d[\d.,\s]*(?:TL|₺|TRY)?$/i;
+  const textSelectors = [
+    '[itemprop="price"]',
+    '[class*="prc-dsc"]',   // Trendyol discounted price
+    '[class*="prc-slg"]',   // Trendyol original price (fallback)
+    '[class*="hb-text-price"]', // Hepsiburada
+    '[class*="product-price"]', // LCW / generic
+  ];
+  for (const sel of textSelectors) {
+    const text = cleanText($(sel).first().text());
+    if (text && text.length < 25 && PRICE_RE.test(text)) return text;
   }
   return '';
 }
