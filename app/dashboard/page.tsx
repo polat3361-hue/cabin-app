@@ -1361,8 +1361,7 @@ export default function DashboardPage() {
                   <div style={{ background: 'linear-gradient(135deg,#7c3aed 0%,#a855f7 50%,#ec4899 100%)', borderRadius: 20, padding: '28px 32px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 32px rgba(124,58,237,0.25)' }}>
                     <div>
                       <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 6, fontWeight: 500 }}>Mevcut Krediniz</div>
-                      <div style={{ fontSize: 56, fontWeight: 800, lineHeight: 1, marginBottom: 6 }}>⚡ {credits}</div>
-                      <div style={{ fontSize: 13, opacity: 0.7 }}>≈ {credits} deneme hakkı kaldı</div>
+                      <div style={{ fontSize: 56, fontWeight: 800, lineHeight: 1 }}>⚡ {credits}</div>
                     </div>
                     <div style={{ fontSize: 72, opacity: 0.12, userSelect: 'none' }}>💳</div>
                   </div>
@@ -1372,11 +1371,11 @@ export default function DashboardPage() {
                     <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a2e', marginBottom: 28 }}>Paket Seç</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(148px, 1fr))', gap: 16, alignItems: 'end' }}>
                       {[
-                        { credits: 20,  price: '$5.99',  label: 'Starter',  popular: false, storage: 'Galeri 3 ay saklanır' },
-                        { credits: 50,  price: '$11.99', label: 'Standard', popular: false, storage: 'Galeri 3 ay saklanır' },
-                        { credits: 120, price: '$24.99', label: 'Plus',     popular: true,  storage: 'Galeri 4 ay saklanır' },
-                        { credits: 300, price: '$49.99', label: 'Premium',  popular: false, storage: 'Galeri 1 yıl saklanır' },
-                        { credits: 700, price: '$99.99', label: 'Pro',      popular: false, storage: 'Galeri 1 yıl saklanır' },
+                        { credits: 20,  price: '$6.99',   label: 'Starter',  popular: false, storage: 'Galeri 3 ay saklanır' },
+                        { credits: 50,  price: '$14.99',  label: 'Standard', popular: false, storage: 'Galeri 3 ay saklanır' },
+                        { credits: 120, price: '$29.99',  label: 'Plus',     popular: true,  storage: 'Galeri 4 ay saklanır' },
+                        { credits: 300, price: '$59.99',  label: 'Premium',  popular: false, storage: 'Galeri 1 yıl saklanır' },
+                        { credits: 700, price: '$119.99', label: 'Pro',      popular: false, storage: 'Galeri 1 yıl saklanır' },
                       ].map(pkg => (
                         <div key={pkg.credits} style={{
                           background: pkg.popular ? '#f5f3ff' : '#fff',
