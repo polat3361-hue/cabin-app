@@ -118,9 +118,9 @@ export default function DashboardPage() {
   }
 
   function saveOutfits(o: Outfit[]) {
-    if (o.length > 20) { setStatus('⚠️ Maksimum 20 ürün ekleyebilirsiniz.'); setTimeout(() => setStatus(''), 4000); return; }
-    setOutfits(o);
-    safeSet('cabin_outfits', o, 20);
+    const limited = o.slice(0, 50);
+    setOutfits(limited);
+    safeSet('cabin_outfits', limited, 50);
   }
 
   function safeSet(key: string, value: any, limit = 20) {
@@ -691,7 +691,7 @@ export default function DashboardPage() {
                 <div style={{ flexShrink: 0 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 8, letterSpacing: '.3px' }}>Farklı ürünleri dene</div>
                   <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-                    {outfits.slice(0, 10).map(o => (
+                    {outfits.slice(0, 20).map(o => (
                       <div key={o.id} onClick={() => { if (!isKombin) setSelectedOutfit(o); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: isKombin ? 'default' : 'pointer', flexShrink: 0, width: 70 }}>
                         <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', border: `2px solid ${selectedOutfit?.id === o.id ? '#7c3aed' : '#e5e7eb'}`, position: 'relative' }}>
                           <img src={o.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
