@@ -15,6 +15,17 @@ TOPLAM ÖDÜL HAVUZU: 40 kredi (davet 30 + sosyal 10)
 - 4 sosyal medyanın hepsinde paylaş: +5 kredi daha (birikmiş toplam 10)
 - Paylaşım DOĞRULANAMAZ (platformlar bildirmez). Suistimal riski var.
 
+### SOSYAL PAYLAŞIM DOĞRULAMA
+
+- Paylaş butonu: tıklayınca platformun paylaşım ekranı açılır (Facebook/X otomatik share URL; Instagram/TikTok web'den otomatik paylaşım desteklemiyor → link kopyala + yönlendir).
+- Kredi için KANIT gerekir: kullanıcı paylaşımının ekran görüntüsünü veya herkese açık gönderi linkini sunar. "Paylaştım" demek yetmez.
+- ŞARTLAR:
+  1. Paylaşımın üzerinden en az 1 SAAT geçmiş olmalı (anlık paylaşıp silmeyi engeller).
+  2. Paylaşım HERKESE AÇIK (public) olmalı.
+- KONTROL: başlangıçta MANUEL onay (admin kanıta bakıp 1 saat + herkese açık şartını doğrular). Otomatik kontrol (OCR/sahte görsel tespiti) çok zor, ölçek büyüyünce değerlendirilir.
+- Üstüne mevcut korumalar: ön şart (en az 1 paket satın alma) + her paylaşım görevi tek sefer.
+- NOT: Manuel onay için ileride basit bir admin paneli gerekecek. Tüm bu sistem ödeme + görev mantığı kurulduktan sonra uygulanacak.
+
 ### SUİSTİMAL KORUMALARI
 1. ÖN ŞART: Görev ödülü almak için kullanıcı önce EN AZ BİR PAKET satın almış (para ödemiş) olmalı. Hiç ödeme yapmayan ödül alamaz.
 2. Görevler tamamlanınca KİLİTLENİR (6 ay donar).
