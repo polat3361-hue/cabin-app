@@ -764,13 +764,15 @@ export default function DashboardPage() {
             </div>
 
             {/* ── MIDDLE COLUMN (flex) ── */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f5f3ff', overflow: 'hidden', padding: 16, gap: 12 }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', overflow: 'hidden', padding: 16, gap: 12 }}>
 
               {/* Sonuç alanı */}
               <div style={{ flex: 1, borderRadius: 16, border: '2px solid #ddd6fe', overflow: 'hidden', position: 'relative', background: '#fafafa', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
 
                 {/* Kategori barı */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 12px', borderBottom: '1px solid #f0eef8', flexShrink: 0, background: '#fff' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 12px', borderBottom: '1px solid #f0eef8', flexShrink: 0, background: '#fff', alignItems: 'center' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', whiteSpace: 'nowrap', marginRight: 2 }}>Kategori Seç</span>
+                  <div style={{ width: 1, height: 16, background: '#e5e7eb', marginRight: 2, flexShrink: 0 }} />
                   {[
                     { cat: 'Üst',      icon: <Shirt size={14}/> },
                     { cat: 'Alt',      icon: <Scissors size={14}/> },
@@ -794,7 +796,7 @@ export default function DashboardPage() {
                 <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
 
                   {/* ÖNCE - Kişi fotoğrafı */}
-                  <div style={{ flex: 1, position: 'relative', borderRight: '1px solid #f0eef8', overflow: 'hidden', background: '#f8f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ flex: 1, position: 'relative', borderRight: '1px solid #f0eef8', overflow: 'hidden', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {selectedPhoto ? (
                       <>
                         <img src={selectedPhoto.url} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center' }} />
@@ -827,7 +829,7 @@ export default function DashboardPage() {
                   </div>
 
                   {/* SONRA - Sonuç */}
-                  <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#f8f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {loading ? (
                       <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
                         <div style={{ position: 'relative', width: 100, height: 100 }}>
